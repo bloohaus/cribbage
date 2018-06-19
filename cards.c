@@ -5,6 +5,10 @@
 
 enum suit {HEARTS, CLUBS, DIAMONDS, SPADES};
 
+void setupCards(){
+	srand(time(NULL));
+}
+
 typedef struct 
  {
  	int suit;
@@ -74,31 +78,31 @@ deck makeDeck(){
  }
  
  
- void shuffleDeck(deck d){
+ void shuffleDeck(deck *d){
  	card *buffDeck;
  	int deckLength,
  		selection,
  		bufferIndex,
  		i;
  	
- 	buffDeck = malloc(d.len * sizeof(card));
+ 	buffDeck = malloc(d->len * sizeof(card));
  	
- 	deckLength = d.len;
+ 	deckLength = d->len;
  	bufferIndex = 0;
  	
  	while (deckLength > 0){
  		
  		selection = randRange(0, deckLength - 1);
- 		buffDeck[bufferIndex] = d.cards[selection];
+ 		buffDeck[bufferIndex] = d->cards[selection];
  		for (i = selection; i < deckLength - 2; i++){
- 			d.cards[i] = d.cards[i + 1];
+ 			d->cards[i] = d->cards[i + 1];
  		}
  		deckLength--;
  		bufferIndex++;
  	}
  	
- 	free(d.cards);
-	d.cards = buffDeck;
+ 	free(d->cards);
+	d->cards = buffDeck;
 
  }
  

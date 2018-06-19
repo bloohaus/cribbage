@@ -13,7 +13,9 @@ int main(int argc, char * argv[]){
  	d = makeDeck();
     int i;
 
- 	shuffleDeck(d);
+    setupCards();
+
+ 	shuffleDeck(&d);
  	printDeck(d.cards, 52);
  	srand(time(NULL));
  	
