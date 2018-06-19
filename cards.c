@@ -3,7 +3,8 @@
 #include <time.h>
 #include <string.h>
 
-enum suit {HEARTS, CLUBS, DIAMONDS, SPADES};
+enum suit {CLUBS, SPADES, HEARTS, DIAMONDS};
+enum comp {HIGHER, LOWER, SAME};
 
 void setupCards(){
 	srand(time(NULL));
@@ -69,11 +70,14 @@ deck makeDeck(){
  }
  
  
- void printDeck(card *deck, int length){
+ void printDeck(deck d){
  	
- 	int i;
+ 	int i, length;
+	card c;
+	length = d.len;
  	for (i = 0; i < length; i++){
- 		printCard(deck + i);
+		c = d.cards[i];
+ 		printCard(&c);
  	}
  }
  
@@ -106,26 +110,43 @@ deck makeDeck(){
 
  }
  
-card** deal(deck *d, int hands, int cards){
- 	int player,
- 		i, j;
+deck *deal(deck *d, int hands, int cards){
+ 	int i, j;
  	
-	card **handptr;
-
-	handptr = malloc(hands * sizeof(cardptr));
+	deck *handptr;
+	handptr = malloc(hands * sizeof(deck));
 
 	for (j = 0; j < hands; j++){
-		handptr[j] = malloc(cards * sizeof(card));
+		
+		handptr[j].len = cards;
+		handptr[j].cards = malloc(cards * sizeof(card));
 	}
 	 
 	
  	for(i = 0; i < cards; i++)
  	{
 		for (j = 0; j < hands; j++) {
-			handptr[j][i] = d->cards[d->len--];
+			handptr[j].cards[i] = d->cards[d->len - 1];
+			d->len--;
 		}
  	}
 
 	return handptr;
 
+ }
+
+ int compCards(card c1, card c2){
+	 if (c1.value < c2.value){
+		 return LOWER;
+	 } else if (c1.value > c2.value) {
+		 return HIGHER;
+	 } else {
+		 if (c1.suit < c2.suit){
+			 return LOWER;
+		 } else if (c1.suit > c2.suit){
+			 return HIGHER;
+		 } else {
+			 return SAME;
+		 }
+	 }
  }
