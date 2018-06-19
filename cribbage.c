@@ -3,7 +3,7 @@
 #include <stdlib.h> 
 
 
-#define HANDNUMBER 2
+#define HANDNUMBER 4
 #define HANDLENGTH 6
 
 
@@ -34,8 +34,6 @@ int main(int argc, char * argv[]){
  	printf("Hand %d:\n", i + 1);
  	printDeck(hands[i]);
     }
-
-
  }
  
 
@@ -50,5 +48,5 @@ void sameCount(deck d){
             }
         }
     }
-    printf("We found %d duplicates.\n", sameCounter);
+    printf("We found %d duplicates.\n", sameCounter); 
  }

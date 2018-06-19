@@ -98,7 +98,7 @@ deck makeDeck(){
  		
  		selection = randRange(0, deckLength - 1);
  		buffDeck[bufferIndex] = d->cards[selection];
- 		for (i = selection; i < deckLength - 2; i++){
+ 		for (i = selection; i < deckLength - 1; i++){
  			d->cards[i] = d->cards[i + 1];
  		}
  		deckLength--;
