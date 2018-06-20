@@ -22,7 +22,7 @@ typedef struct
   	int len;
   } deck;
 
- typedef card* cardptr;
+typedef card* cardptr;
  
 deck makeDeck(){
  	deck d;
@@ -41,31 +41,27 @@ deck makeDeck(){
  		}
  	}
 
-	 d.len = 52;
+	d.len = 52;
  	
  	return d;
  }
  
- int randRange(int min, int max){
+int randRange(int min, int max){
  	return min + rand() / (RAND_MAX / (max - min + 1) + 1);
  }
  
  
- void printCard(card* c){
+void printCard(card* c){
  	char suitName[9];
- 	if (c->suit == HEARTS) 
- 	{
+ 	if (c->suit == HEARTS){
  		strcpy(suitName, "HEARTS");
- 	} else if (c->suit == DIAMONDS)
- 	 {
+ 	} else if (c->suit == DIAMONDS){
  		strcpy(suitName, "DIAMONDS");
- 	} else if(c->suit == CLUBS)
- 	 {
+ 	} else if (c->suit == CLUBS){
  	 	strcpy(suitName, "CLUBS");
- 	 } else
- 	  {
+ 	} else {
  	  	strcpy(suitName, "SPADES");
- 	  }
+ 	}
  	printf("%d of %s\n", c->value, suitName);
  }
  
@@ -135,10 +131,11 @@ deck *deal(deck *d, int hands, int cards){
 
  }
 
- int compCards(card c1, card c2){
+
+int compCards(card c1, card c2){
 	 if (c1.value < c2.value){
 		 return LOWER;
-	 } else if (c1.value > c2.value) {
+	 } else if (c1.value > c2.value){
 		 return HIGHER;
 	 } else {
 		 if (c1.suit < c2.suit){
@@ -150,3 +147,24 @@ deck *deal(deck *d, int hands, int cards){
 		 }
 	 }
  }
+ 
+void sortDeck(deck *d){
+ 	card buffCard;
+ 	int i, 
+ 		j;
+ 		
+ 	for (i = 1; i < d->len; i++){
+ 		buffCard = d->cards[i];
+ 		for (j = i - 1; j >= 0; j--) {
+ 			if (compCards(d->cards[j], buffCard) == HIGHER){
+ 				d->cards[j + 1] = d->cards[j];
+ 				if (j == 0) {
+ 					d->cards[j] = buffCard;
+ 				}
+ 			} else if (compCards(d->cards[j], buffCard) == LOWER){
+ 				d->cards[j + 1] = buffCard;
+ 				break;
+ 			}
+		}
+ 	}
+ } 
