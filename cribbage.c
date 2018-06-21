@@ -3,8 +3,11 @@
 #include <stdlib.h> 
 
 
-#define HANDNUMBER 4
+#define HANDNUMBER 2
 #define HANDLENGTH 6
+
+int fifteenPoints(deck hand);
+int cardValue(card c);
 
 int main(int argc, char * argv[]){
 
@@ -30,5 +33,21 @@ int main(int argc, char * argv[]){
  		printDeck(hands[i]);
  		printf("\n");
     }
+
+    moveCard(&d, hands, d.len - 1);
+    sortDeck(hands);
+    printf("\nNew Hand 1:\n");
+    printDeck(hands[0]);
  }
  
+int cardValue(card c){
+    if (c.value <= 10){
+        return c.value;
+    } else {
+        return 10;
+    }
+}
+
+int fifteenPoints(deck hand){
+    ;;;;
+}

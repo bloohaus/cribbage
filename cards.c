@@ -10,19 +10,16 @@ void setupCards(){
 	srand(time(NULL));
 }
 
-typedef struct 
- {
- 	int suit;
- 	int value;
+typedef struct {
+	int suit;
+	int value;
  } card;
  
- typedef struct 
-  {
+ typedef struct {
   	card *cards;
   	int len;
+	int cap;
   } deck;
-
-typedef card* cardptr;
  
 deck makeDeck(){
  	deck d;
@@ -42,6 +39,7 @@ deck makeDeck(){
  	}
 
 	d.len = 52;
+	d.cap = 52;
  	
  	return d;
  }
@@ -49,20 +47,38 @@ deck makeDeck(){
 int randRange(int min, int max){
  	return min + rand() / (RAND_MAX / (max - min + 1) + 1);
  }
- 
- 
-void printCard(card* c){
- 	char suitName[9];
- 	if (c->suit == HEARTS){
+
+
+void printCard(card c){
+ 	char suitName[9],
+ 		 ch[3];
+ 	
+ 	if (c.suit == HEARTS){
  		strcpy(suitName, "HEARTS");
- 	} else if (c->suit == DIAMONDS){
+ 	} else if (c.suit == DIAMONDS){
  		strcpy(suitName, "DIAMONDS");
- 	} else if (c->suit == CLUBS){
+ 	} else if (c.suit == CLUBS){
  	 	strcpy(suitName, "CLUBS");
  	} else {
  	  	strcpy(suitName, "SPADES");
  	}
- 	printf("%d of %s\n", c->value, suitName);
+ 	
+ 	if (c.value > 1 && c.value < 10){
+		ch[0] = ( c.value) + '0';
+		ch[1] = '\0';
+	} else if (c.value == 1){
+		strcpy(ch, "A");
+	} else if (c.value == 10){
+		strcpy(ch, "10");
+	} else if (c.value == 11){
+		strcpy(ch, "J");
+	} else if (c.value == 12){
+		strcpy(ch, "Q");
+	} else if (c.value == 13){
+		strcpy(ch, "K");
+	} 
+ 	
+ 	printf("%s of %s\n", ch, suitName);
  }
  
  
@@ -73,19 +89,24 @@ void printCard(card* c){
 	length = d.len;
  	for (i = 0; i < length; i++){
 		c = d.cards[i];
- 		printCard(&c);
+ 		printCard(c);
  	}
  }
  
+ void shiftCards(deck d, int holeIndex){
+	for (; holeIndex < d.len - 1; holeIndex++){
+		d.cards[holeIndex] = d.cards[holeIndex + 1];
+	}
+}
  
  void shuffleDeck(deck *d){
- 	card *buffDeck;
+ 	card *buffCards;
  	int deckLength,
  		selection,
  		bufferIndex,
  		i;
  	
- 	buffDeck = malloc(d->len * sizeof(card));
+ 	buffCards = malloc(d->len * sizeof(card));
  	
  	deckLength = d->len;
  	bufferIndex = 0;
@@ -93,16 +114,14 @@ void printCard(card* c){
  	while (deckLength > 0){
  		
  		selection = randRange(0, deckLength - 1);
- 		buffDeck[bufferIndex] = d->cards[selection];
- 		for (i = selection; i < deckLength - 1; i++){
- 			d->cards[i] = d->cards[i + 1];
- 		}
+ 		buffCards[bufferIndex] = d->cards[selection];
+ 		shiftCards(*d, selection);
  		deckLength--;
  		bufferIndex++;
  	}
  	
  	free(d->cards);
-	d->cards = buffDeck;
+	d->cards = buffCards;
 
  }
  
@@ -115,6 +134,7 @@ deck *deal(deck *d, int hands, int cards){
 	for (j = 0; j < hands; j++){
 		
 		handptr[j].len = cards;
+		handptr[j].cap = cards;
 		handptr[j].cards = malloc(cards * sizeof(card));
 	}
 	 
@@ -168,3 +188,18 @@ void sortDeck(deck *d){
 		}
  	}
  } 
+
+void moveCard(deck *deckFrom, deck *deckTo, int cardIndex){
+	
+	if (deckTo->cap == deckTo->len){
+		deckTo->cards = realloc(deckTo->cards, (deckTo->len + 1) * sizeof(card));
+		deckTo->cap++;
+		printf("Realloc'd the hand. Cap now is %d\n", deckTo->cap);
+	}
+
+	deckTo->cards[deckTo->len++] = deckFrom->cards[cardIndex];
+	shiftCards(*deckFrom, cardIndex);
+	deckFrom->len--;
+	printDeck(*deckTo);
+
+} 
