@@ -194,12 +194,30 @@ void moveCard(deck *deckFrom, deck *deckTo, int cardIndex){
 	if (deckTo->cap == deckTo->len){
 		deckTo->cards = realloc(deckTo->cards, (deckTo->len + 1) * sizeof(card));
 		deckTo->cap++;
-		printf("Realloc'd the hand. Cap now is %d\n", deckTo->cap);
 	}
 
 	deckTo->cards[deckTo->len++] = deckFrom->cards[cardIndex];
 	shiftCards(*deckFrom, cardIndex);
 	deckFrom->len--;
-	printDeck(*deckTo);
 
 } 
+
+deck joinDecks(deck d1, deck d2){
+	int i, j;
+	deck d;
+	
+	d.cap = d.len = d1.len + d2.len;
+	d.cards = malloc(d.cap * sizeof(card));
+	
+	j = 0;
+	
+	for (i = 0; i < d1.len; i++, j++){
+		d.cards[j] = d1.cards[i];
+	}
+	
+	for (i = 0; i < d2.len; i++, j++){
+		d.cards[j] = d2.cards[i];
+	}
+	
+	return d;
+}
