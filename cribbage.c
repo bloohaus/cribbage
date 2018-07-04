@@ -51,8 +51,12 @@ int main(int argc, char * argv[]){
     
     pPoints = pairPoints(scoreHand);
     printf("there were %d pair points in the first hand.\n", pPoints);
-    
-    fPoints = fifteenPoints(scoreHand, 0, 0);
+    for (i = 0; i < scoreHand.len; i++){
+		if (cardValue(scoreHand.cards[i]) > 7){
+			break;
+		}
+    	fPoints += fifteenPoints(scoreHand, 0, i);
+    }
     printf("there were %d fifteen points in the first hand.\n", fPoints);
 }
  
@@ -65,24 +69,28 @@ int cardValue(card c){
 }
 
 int fifteenPoints(deck hand, int sum, int position){
-    int points, i, j;
+    int points, i, j,
+    	sumBase;
     points = 0;
-	sum = sum + cardValue(hand.cards[position]);
-	printf("Calling fifteenPoints\nsum: %d\nposition: %d\ncard:", sum, position);
+//	printf("running fifteenPoints\nsum: %d\nposition: %d\ncard:", sum, position);
 	printCard(hand.cards[position]);
 /*	if (sum > 15){
 		return 0;
 	} */
     for (j = position + 1; j < hand.len; j++){
-		printf("Looking at card: ");
+		sumBase = sum + cardValue(hand.cards[position]);
+		if (sumBase == 15){
+			points += 2;
+		}
+//		printf("Looking at card: ");
 		printCard(hand.cards[j]);
     	if (sum + cardValue(hand.cards[j]) == 15){
     		points += 2;
-			printf("found a 15!\n points: %d\n", points);
+//			printf("found a 15!\n points: %d\n", points);
     	} else if (sum + cardValue(hand.cards[j]) < 15) {
-			printf("Under 15->looping through rest.\n");
+//			printf("Under 15->looping through rest.\n");
     		for (i = j + 1; i < hand.len; i++){
-    			points += fifteenPoints(hand, sum+ cardValue(hand.cards[j]), i);
+    			points += fifteenPoints(hand, sumBase , i);
     		}
 		}
     }
