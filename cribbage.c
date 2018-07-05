@@ -47,13 +47,15 @@ int main(int argc, char * argv[]){
 
 	scoreHand = joinDecks(hands[0], upCard);
 	sortDeck(&scoreHand);
-	printDeck(scoreHand);
+	
 	
 	scoreHand.cards[0].value = 6;
 	scoreHand.cards[1].value = 7;
-	scoreHand.cards[2].value = 7;
-	scoreHand.cards[3].value = 8;
-	scoreHand.cards[4].value = 9;
+	scoreHand.cards[2].value = 8;
+	scoreHand.cards[3].value = 10;
+	scoreHand.cards[4].value = 11;
+	
+	printDeck(scoreHand);
 
     pPoints = pairPoints(scoreHand);
     printf("there were %d pair points in the first hand.\n", pPoints);
@@ -117,7 +119,7 @@ int runPoints(deck hand){
 		multiplier,
 		i;
 	
-	len = 0;
+	len = 1;
 	multiplier = 1;
 	
 	for (i = 1; i < hand.len; i++){
@@ -126,7 +128,7 @@ int runPoints(deck hand){
 		} else if (hand.cards[i - 1].value == hand.cards[i].value - 1){
 			len++;
 		} else if (len < 3){
-			len = 0;
+			len = 1;
 			multiplier = 1;
 		} else {
 			break;
