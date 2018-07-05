@@ -141,12 +141,11 @@ int fifteenPoints(deck hand, int sum, int position, card* set){
 		} else if (workingSum < 15){
 					printSet(homeSet);
 		printf("adds up to %d\n", workingSum);
-			for (j = i + 1; j < hand.len; j++){
-				printSet(homeSet);
-				printf("adds up to %d\n", workingSum);
-				printf("is less than 15. let's call fifteenPoints(hand, workingSum: %d, position: %d, set)\n", workingSum, j);
-				points += fifteenPoints(hand, workingSum, j, homeSet);
-			}
+		printSet(homeSet);
+		printf("adds up to %d\n", workingSum);
+		printf("is less than 15. let's call fifteenPoints(hand, workingSum: %d, position: %d, set)\n", workingSum, j);
+		points += fifteenPoints(hand, workingSum, i + 1, homeSet);
+			
 			
 		}
 		cardPop(homeSet);
