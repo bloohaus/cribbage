@@ -6,9 +6,6 @@
 enum suit {CLUBS, SPADES, HEARTS, DIAMONDS};
 enum comp {HIGHER, LOWER, SAME};
 
-void setupCards(){
-	srand(time(NULL));
-}
 
 typedef struct {
 	int suit;
@@ -20,7 +17,32 @@ typedef struct {
   	int len;
 	int cap;
   } deck;
- 
+
+//*******************************************Funciton Declarations  
+
+/*
+void setupCards();
+deck makeDeck();
+int randRange(int min, int max);
+void printCard(card c);
+void printDeck(deck d)
+void shiftCards(deck d, int holeIndex);
+void shuffleDeck(deck *d);
+deck *deal(deck *d, int hands, int cards);
+int compCards(card c1, card c2);
+void sortDeck(deck d);
+void moveCard(deck *deckFrom, deck *deckTo, int cardIndex);
+void copyCard(deck deckFrom, deck deckTo, int cardIndex);
+void copyDeck(deck deckFrom, deck deckTo);
+deck joinDecks(deck d1, deck d2);
+deck emptyDeck(int size);
+void freeDeck(deck d);
+*/
+//*******************************************Function Definitions 
+void setupCards(){
+	srand(time(NULL));
+}
+
 deck makeDeck(){
  	deck d;
  	int suit,
@@ -64,7 +86,7 @@ void printCard(card c){
  	}
  	
  	if (c.value > 1 && c.value < 10){
-		ch[0] = ( c.value) + '0';
+		ch[0] = (c.value) + '0';
 		ch[1] = '\0';
 	} else if (c.value == 1){
 		strcpy(ch, "A");
@@ -89,6 +111,7 @@ void printCard(card c){
 	length = d.len;
  	for (i = 0; i < length; i++){
 		c = d.cards[i];
+		printf("%d: ", i + 1);
  		printCard(c);
  	}
  }
@@ -99,7 +122,7 @@ void printCard(card c){
 	}
 }
  
- void shuffleDeck(deck *d){
+void shuffleDeck(deck *d){
  	card *buffCards;
  	int deckLength,
  		selection,
@@ -168,21 +191,21 @@ int compCards(card c1, card c2){
 	 }
  }
  
-void sortDeck(deck *d){
+void sortDeck(deck d){
  	card buffCard;
  	int i, 
  		j;
  		
- 	for (i = 1; i < d->len; i++){
- 		buffCard = d->cards[i];
+ 	for (i = 1; i < d.len; i++){
+ 		buffCard = d.cards[i];
  		for (j = i - 1; j >= 0; j--) {
- 			if (compCards(d->cards[j], buffCard) == HIGHER){
- 				d->cards[j + 1] = d->cards[j];
+ 			if (compCards(d.cards[j], buffCard) == HIGHER){
+ 				d.cards[j + 1] = d.cards[j];
  				if (j == 0) {
- 					d->cards[j] = buffCard;
+ 					d.cards[j] = buffCard;
  				}
- 			} else if (compCards(d->cards[j], buffCard) == LOWER){
- 				d->cards[j + 1] = buffCard;
+ 			} else if (compCards(d.cards[j], buffCard) == LOWER){
+ 				d.cards[j + 1] = buffCard;
  				break;
  			}
 		}
@@ -202,6 +225,24 @@ void moveCard(deck *deckFrom, deck *deckTo, int cardIndex){
 
 } 
 
+void copyCard(deck deckFrom, deck deckTo, int cardIndex){
+	if (deckTo.cap == deckTo.len){
+		deckTo.cards = realloc(deckTo.cards, (deckTo.len + 1) * sizeof(card));
+		deckTo.cap++;
+	}
+	
+	deckTo.cards[deckTo.len++] = deckFrom.cards[cardIndex];
+}
+
+void copyDeck(deck deckFrom, deck deckTo){
+	int i;
+	deckTo.len = deckTo.cap = deckFrom.len;
+	deckTo.cards = realloc(deckTo.cards, deckFrom.len * sizeof(card));
+	for (i = 0; i < deckFrom.len; i++){
+		deckTo.cards[i] = deckFrom.cards[i];
+	} 
+}
+
 deck joinDecks(deck d1, deck d2){
 	int i, j;
 	deck d;
@@ -209,9 +250,7 @@ deck joinDecks(deck d1, deck d2){
 	d.cap = d.len = d1.len + d2.len;
 	d.cards = malloc(d.cap * sizeof(card));
 	
-	j = 0;
-	
-	for (i = 0; i < d1.len; i++, j++){
+	for (i = 0, j = 0; i < d1.len; i++, j++){
 		d.cards[j] = d1.cards[i];
 	}
 	
@@ -219,5 +258,17 @@ deck joinDecks(deck d1, deck d2){
 		d.cards[j] = d2.cards[i];
 	}
 	
+	return d;
+}
+
+void freeDeck(deck d){
+	free(d.cards);
+}
+
+deck emptyDeck(int size){
+	deck d;
+	d.len = 0;
+	d.cap = size;
+	d.cards = malloc(size * sizeof(card));
 	return d;
 }
