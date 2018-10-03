@@ -37,7 +37,6 @@ int main(int argc, char **argv){
  		 crib,
     	 *hands;
     int i, 
-        j,
         dealer,
         playerPoints[2];
 
@@ -162,7 +161,7 @@ int cardValue(card c){
 }
 
 int fifteenPoints(deck hand, int sum, int position){
-	int i, j;
+	int i;
 	int points, workingSum;
 
 	points = 0;
@@ -436,28 +435,34 @@ int peg(deck *hands, int *p0Points, int *p1Points, int dealer){
 	player = !dealer;
 	sum = 0;
 	
+
+	scoringDeck = emptyDeck(1);
+	showingDeck = emptyDeck(1);
+	
 	for (i = 0; i < 2; i++){
 		localHands[i] = emptyDeck(4);
 		copyDeck(hands[i], localHands[i]);
 	}
 	
-	scoringDeck = emptyDeck(0);
-	showingDeck = emptyDeck(0);
 	
 	while (localHands[0].len > 0 || localHands[1].len > 0){
 	
 		if (cardValue(localHands[player].cards[0]) + sum ){
 			if (sum ){
-			
-		} else {
+
+			} else {
 			computerPeg(localHands[player], scoringDeck);
-		}
+			}
 		localHands[0].len--;
 		localHands[1].len--;
 		player = !player;
-	} 
-	
+		}	 
+	}
+
 	for (i = 0; i < 2; i++){
 		freeDeck(localHands[i]);
 	}
-}}
+	freeDeck(scoringDeck);
+	freeDeck(showingDeck);
+	return 0;
+}

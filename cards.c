@@ -126,8 +126,7 @@ void shuffleDeck(deck *d){
  	card *buffCards;
  	int deckLength,
  		selection,
- 		bufferIndex,
- 		i;
+ 		bufferIndex;
  	
  	buffCards = malloc(d->len * sizeof(card));
  	
@@ -237,7 +236,10 @@ void copyCard(deck deckFrom, deck deckTo, int cardIndex){
 void copyDeck(deck deckFrom, deck deckTo){
 	int i;
 	deckTo.len = deckTo.cap = deckFrom.len;
-	deckTo.cards = realloc(deckTo.cards, deckFrom.len * sizeof(card));
+	if (deckTo.len != deckFrom.len) {
+		deckTo.cards = realloc(deckTo.cards, deckFrom.len * sizeof(card));
+	}
+	
 	for (i = 0; i < deckFrom.len; i++){
 		deckTo.cards[i] = deckFrom.cards[i];
 	} 
