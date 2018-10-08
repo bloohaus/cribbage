@@ -28,7 +28,7 @@ void win(int *playerPoints);
 void cribSelectProgram(deck *hand, deck *crib);
 void cribSelectPlayer(deck *hand, deck *crib, int dealer);
 int scoreHand(deck hand, deck upCard, int crib);
-int peg(deck *hands, int *p0Points, int *p1Points, int dealer);
+void peg(deck *hands, int *p0Points, int *p1Points, int dealer);
 
 int main(int argc, char **argv){
 
@@ -148,6 +148,8 @@ int main(int argc, char **argv){
     	
     	playerPoints[0] += WIN_VALUE;
     }
+    
+    return 10;
 }
 
 //Game Logic Functions
@@ -355,6 +357,43 @@ void win(int *playerPoints){
 	}
 }
 
+
+int scoreHand(deck hand, deck upCard, int crib){
+	deck sHand;
+	int pPoints,
+        fPoints,
+        flPoints,
+        rPoints,
+        nPoints,
+        points;
+	sHand = joinDecks(hand, upCard);
+	sortDeck(sHand);
+	printDeck(sHand);
+
+    pPoints = pairPoints(sHand);
+    printf("pair points: %d\n", pPoints);
+
+    fPoints = fifteenPoints(sHand, 0, 0);
+    printf("fifteen points: %d\n", fPoints);
+    
+    rPoints = runPoints(sHand);
+	printf("run points: %d\n", rPoints);
+    
+    flPoints = flushPoints(hand, upCard, crib);
+    printf("flush points: %d\n", flPoints);
+    
+    nPoints = nobPoints(hand, upCard);
+    printf("nob points: %d\n", nPoints);
+    
+    points = pPoints + fPoints + rPoints + flPoints + nPoints;
+    
+    printf("Total points: %d\n", points);
+    
+    freeDeck(sHand);
+    
+    return points;
+}
+
 void cribSelectProgram(deck *hand, deck *crib){
 	moveCard(hand,crib, hand->len - 1);
 	moveCard(hand,crib, hand->len - 1);
@@ -377,41 +416,6 @@ void cribSelectPlayer(deck *hand, deck *crib, int dealer){
 	}
 }
 
-int scoreHand(deck hand, deck upCard, int crib){
-	deck sHand;
-	int pPoints,
-        fPoints,
-        flPoints,
-        rPoints,
-        nPoints,
-        points;
-	sHand = joinDecks(hand, upCard);
-	sortDeck(sHand);
-	printDeck(sHand);
-
-    pPoints = pairPoints(sHand);
-    printf("there were %d pair points in the first hand.\n", pPoints);
-
-    fPoints = fifteenPoints(sHand, 0, 0);
-    printf("there were %d fifteen points in the first hand.\n", fPoints);
-    
-    rPoints = runPoints(sHand);
-	printf("there were %d run points in the first hand\n", rPoints);
-    
-    flPoints = flushPoints(hand, upCard, crib);
-    printf("there were %d flush points in the first hand\n", flPoints);
-    
-    nPoints = nobPoints(hand, upCard);
-    printf("there were %d nob points in the first hand\n", nPoints);
-    
-    points = pPoints + fPoints + rPoints + flPoints + nPoints;
-    
-    printf("Total points: %d\n", points);
-    
-    freeDeck(sHand);
-    
-    return points;
-}
 
 int pegScore(card c, deck scoringDeck){
 	
@@ -424,39 +428,75 @@ int computerPeg(deck hand, deck activeDeck){
 	return 0;
 }
 
-int peg(deck *hands, int *p0Points, int *p1Points, int dealer){
+int humanPeg(deck hand, int sum){
+	if (hand.cards[0] + sum > 31){
+		return -1;
+	}
+	printDeck(hand);
+	printf("")
+}
+
+void peg(deck *hands, int *p0Points, int *p1Points, int dealer){
 	int player, 
 		sum,
-		i;
+		i,
+		index,
+		go, 
+		selection
+		*points[2];
 	deck localHands[2],
 		 scoringDeck,
 		 showingDeck;
 		 
 	player = !dealer;
 	sum = 0;
+	go = 0;
+	index = 0;
+	points[0] = p0Points;
+	points[1] = p1Points;
 	
 
-	scoringDeck = emptyDeck(1);
-	showingDeck = emptyDeck(1);
+	scoringDeck = emptyDeck(8);
+	showingDeck = emptyDeck(8);
 	
 	for (i = 0; i < 2; i++){
 		localHands[i] = emptyDeck(4);
 		copyDeck(hands[i], localHands[i]);
 	}
 	
+	while (localHands[0].len > 0 || localHands[1].len > 0) {
+    	if (localHands[player].len == 0){
+    		player = !player;
+    		continue;
+    	}
+    	if (localHands[player].cards[0] + sum <= 31){
+    		if (player){
+    			selection = humanPeg(localHands[player], sum);
+    		} else {
+    			selection = computerPeg(localHands[player], sum);
+    		}
+    		moveCard(localHands[player], showingDeck, selection);
+    		printf("Played Cards:\n");
+    		printDeck(showingDeck);
+    		copyDeckFromIndex(showingDeck, scoringDeck, index);
+    		scorePegginDeck(scoringDeck);
+    		
+    	} else {
+    		printf("Player %s says 'GO'.\n", player + 1);
+    		while (localHands[!player].cards[0] + sum <= 31) {
+    			
+    		}
+    		
+    	}
+    	player = !player;
+	}
 	
-	while (localHands[0].len > 0 || localHands[1].len > 0){
-	
-		if (cardValue(localHands[player].cards[0]) + sum ){
-			if (sum ){
-
-			} else {
-			computerPeg(localHands[player], scoringDeck);
-			}
-		localHands[0].len--;
-		localHands[1].len--;
-		player = !player;
-		}	 
+	if (player) {
+		printf("%s a point for last card.\n", player? "You get": "The computer gets");
+		(*points[player])++;
+	} else {
+		printf("p1Points gets a point for last card.\n");
+		*p1Points++;
 	}
 
 	for (i = 0; i < 2; i++){
@@ -464,5 +504,5 @@ int peg(deck *hands, int *p0Points, int *p1Points, int dealer){
 	}
 	freeDeck(scoringDeck);
 	freeDeck(showingDeck);
-	return 0;
+
 }

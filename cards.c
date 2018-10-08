@@ -18,7 +18,7 @@ typedef struct {
 	int cap;
   } deck;
 
-//*******************************************Funciton Declarations  
+//**********************Funciton Declarations  
 
 /*
 void setupCards();
@@ -34,11 +34,14 @@ void sortDeck(deck d);
 void moveCard(deck *deckFrom, deck *deckTo, int cardIndex);
 void copyCard(deck deckFrom, deck deckTo, int cardIndex);
 void copyDeck(deck deckFrom, deck deckTo);
+void copyDeckFromIndex(deck deckFrom, deck deckTo, int index);
 deck joinDecks(deck d1, deck d2);
 deck emptyDeck(int size);
 void freeDeck(deck d);
 */
-//*******************************************Function Definitions 
+
+
+//********************Function Definitions 
 void setupCards(){
 	srand(time(NULL));
 }
@@ -74,37 +77,50 @@ int randRange(int min, int max){
 void printCard(card c){
  	char suitName[9],
  		 ch[3];
- 	
- 	if (c.suit == HEARTS){
- 		strcpy(suitName, "HEARTS");
- 	} else if (c.suit == DIAMONDS){
- 		strcpy(suitName, "DIAMONDS");
- 	} else if (c.suit == CLUBS){
- 	 	strcpy(suitName, "CLUBS");
- 	} else {
- 	  	strcpy(suitName, "SPADES");
- 	}
- 	
- 	if (c.value > 1 && c.value < 10){
-		ch[0] = (c.value) + '0';
-		ch[1] = '\0';
-	} else if (c.value == 1){
-		strcpy(ch, "A");
-	} else if (c.value == 10){
-		strcpy(ch, "10");
-	} else if (c.value == 11){
-		strcpy(ch, "J");
-	} else if (c.value == 12){
-		strcpy(ch, "Q");
-	} else if (c.value == 13){
-		strcpy(ch, "K");
-	} 
+
+
+	switch (c.suit) {
+		case HEARTS: 
+			strcpy(suitName, "HEARTS");
+			break;
+		case DIAMONDS:
+			strcpy(suitName, "DIAMONDS");
+			break;
+		case CLUBS:
+			strcpy(suitName, "CLUBS");
+			break;
+		case SPADES:
+			strcpy(suitName, "SPADES");
+			break;
+	}
+	
+	switch (c.value) {
+		case 1:
+			strcpy(ch, "A");
+			break;
+		case 10:
+			strcpy(ch, "10");
+			break;
+		case 11:
+			strcpy(ch, "J");
+			break;
+		case 12:
+			strcpy(ch, "Q");
+			break;
+		case 13: 
+			strcpy(ch, "K");
+			break;
+		default: 
+			ch[0] = (c.value) + '0';
+			ch[1] = '\0';
+	}
+	
  	
  	printf("%s of %s\n", ch, suitName);
  }
  
  
- void printDeck(deck d){
+void printDeck(deck d){
  	
  	int i, length;
 	card c;
@@ -116,7 +132,7 @@ void printCard(card c){
  	}
  }
  
- void shiftCards(deck d, int holeIndex){
+void shiftCards(deck d, int holeIndex){
 	for (; holeIndex < d.len - 1; holeIndex++){
 		d.cards[holeIndex] = d.cards[holeIndex + 1];
 	}
@@ -235,14 +251,30 @@ void copyCard(deck deckFrom, deck deckTo, int cardIndex){
 
 void copyDeck(deck deckFrom, deck deckTo){
 	int i;
-	deckTo.len = deckTo.cap = deckFrom.len;
+	
 	if (deckTo.len != deckFrom.len) {
 		deckTo.cards = realloc(deckTo.cards, deckFrom.len * sizeof(card));
 	}
 	
+	deckTo.len = deckTo.cap = deckFrom.len;
+	
 	for (i = 0; i < deckFrom.len; i++){
 		deckTo.cards[i] = deckFrom.cards[i];
 	} 
+}
+
+void copyDeckFromIndex(deck deckFrom, deck deckTo, int index){
+	int i;
+	
+	if (deckTo.len != deckFrom.len - index) {
+		deckTo.cards = realloc(deckTo.cards, (deckFrom.len - index) * sizeof(card));
+	}
+	
+	deckTo.len = deckTo.cap = deckFrom.len - index;
+	
+	for (i = 0; index < deckFrom.len; i++, index++) {
+		deckTo[i] = deckFrom[index];
+	}
 }
 
 deck joinDecks(deck d1, deck d2){
