@@ -122,10 +122,10 @@ void printCard(card c){
  
 void printDeck(deck d){
  	
- 	int i, length;
+ 	int i;
 	card c;
-	length = d.len;
- 	for (i = 0; i < length; i++){
+
+ 	for (i = 0; i < d.len; i++){
 		c = d.cards[i];
 		printf("%d: ", i + 1);
  		printCard(c);
@@ -230,11 +230,12 @@ void sortDeck(deck d){
 void moveCard(deck *deckFrom, deck *deckTo, int cardIndex){
 	
 	if (deckTo->cap == deckTo->len){
-		deckTo->cards = realloc(deckTo->cards, (deckTo->len + 1) * sizeof(card));
+		deckTo->cards = realloc(deckTo->cards, (deckTo->cap + 1) * sizeof(card));
 		deckTo->cap++;
 	}
 
-	deckTo->cards[deckTo->len++] = deckFrom->cards[cardIndex];
+	deckTo->cards[deckTo->len] = deckFrom->cards[cardIndex];
+	deckTo->len++;
 	shiftCards(*deckFrom, cardIndex);
 	deckFrom->len--;
 
@@ -249,31 +250,31 @@ void copyCard(deck deckFrom, deck deckTo, int cardIndex){
 	deckTo.cards[deckTo.len++] = deckFrom.cards[cardIndex];
 }
 
-void copyDeck(deck deckFrom, deck deckTo){
+void copyDeck(deck deckFrom, deck *deckTo){
 	int i;
 	
-	if (deckTo.len != deckFrom.len) {
-		deckTo.cards = realloc(deckTo.cards, deckFrom.len * sizeof(card));
+	if (deckTo->cap != deckFrom.len) {
+		deckTo->cards = realloc(deckTo->cards, deckFrom.len * sizeof(card));
 	}
 	
-	deckTo.len = deckTo.cap = deckFrom.len;
+	deckTo->len = deckTo->cap = deckFrom.len;
 	
 	for (i = 0; i < deckFrom.len; i++){
-		deckTo.cards[i] = deckFrom.cards[i];
+		deckTo->cards[i] = deckFrom.cards[i];
 	} 
 }
 
-void copyDeckFromIndex(deck deckFrom, deck deckTo, int index){
+void copyDeckFromIndex(deck deckFrom, deck *deckTo, int index){
 	int i;
 	
-	if (deckTo.len != deckFrom.len - index) {
-		deckTo.cards = realloc(deckTo.cards, (deckFrom.len - index) * sizeof(card));
+	if (deckTo->cap != deckFrom.len - index) {
+		deckTo->cards = realloc(deckTo->cards, (deckFrom.len - index) * sizeof(card));
 	}
 	
-	deckTo.len = deckTo.cap = deckFrom.len - index;
+	deckTo->len = deckTo->cap = deckFrom.len - index;
 	
 	for (i = 0; index < deckFrom.len; i++, index++) {
-		deckTo[i] = deckFrom[index];
+		deckTo->cards[i] = deckFrom.cards[index];
 	}
 }
 
