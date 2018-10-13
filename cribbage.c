@@ -583,20 +583,22 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 	score = 0;
 	
 	if (buffInt = peggingPairs(c, peggingDeck, index)){
+		// offset by one because peggingPairs returns the number of cards in the 
+		// peggingDeck that are identical to the card selected by the player.
 		switch (buffInt) {
-			case 2:
+			case 1:
 				if (loud){
 					printf("A pair for 2.\n");
 				}
 				score += 2;
 				break;
-			case 3:
+			case 2:
 				if (loud){
 					printf("Three of a kind for 6.\n");
 				}
 				score += 6;
 				break;
-			case 4:
+			case 3:
 				if (loud){
 					printf("Four of a kind (!!!) for 12.\n");
 				}
@@ -604,7 +606,7 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 				break;
 			default:
 				if (loud){
-					printf("peggingPairs() returned neither 2, 3, nor 4.\n");
+					printf("peggingPairs() returned neither 1, 2, nor 3.\n");
 					printf("peggingPairs(): %d\n", buffInt);
 				}
 		}
