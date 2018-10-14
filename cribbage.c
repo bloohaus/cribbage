@@ -290,7 +290,7 @@ int cutForDeal(){
 	
 	printf("You selected:      ");
 	printCard(p1Cut.cards[0]);
-	printf("Player 1 selected: ");
+	printf("Computer selected: ");
 	printCard(p0Cut.cards[0]);
 	
 	if (p1Cut.cards[0].value > p0Cut.cards[0].value){
@@ -335,7 +335,7 @@ int addPoints(int player, int *playerPoints, int points){
 	playerPoints[player] += points;
 
 	for (i = 0; i < 2; i++) {
-		printf("playerPoints[%d]: %d\n", i, playerPoints[player]);
+		printf("playerPoints[%d]: %d\n", i, playerPoints[i]);
 	}
 
 	if (*playerPoints >= WIN_VALUE){
@@ -346,18 +346,49 @@ int addPoints(int player, int *playerPoints, int points){
 
 void win(int *playerPoints){
 	if (playerPoints[0] > playerPoints[1]){
-		printf("Player 1 wins with %d points!\n", playerPoints[0]);
-		printf("Player 2 (you) finished with %d points.\n", playerPoints[1]);
+		printf("Computer wins with %d points!\n", playerPoints[0]);
+		printf("You finished with %d points.\n", playerPoints[1]);
 		if (playerPoints[1] <= SKUNK_VALUE){
 			printf("You were SKUNKED!\n");
 		}
 	} else {
-		printf("Player 2 (you) wins with %d points!\n", playerPoints[1]);
-		printf("Player 1 finished with %d points.\n", playerPoints[0]);
+		printf("You win with %d points!\n", playerPoints[1]);
+		printf("Computer finished with %d points.\n", playerPoints[0]);
 		if (playerPoints[0] <= SKUNK_VALUE){
 			printf("You SKUNKED the opposition!\n");
 		}
 	}
+}
+
+int flushPointsJustHand(deck hand) {
+	int suit,
+		i;
+	suit = hand.cards[0].suit;
+
+	for (i = 1; i < hand.len; i++) {
+		if (hand.cards[i].suit != suit) {
+			return 0;
+		}
+	}
+
+	return 4;
+}
+
+int scoreHandWithoutUpcard(deck hand){
+	int pPoints,
+        fPoints,
+        flPoints,
+        rPoints,
+        points;
+	
+	
+	pPoints = pairPoints(hand);
+    fPoints = fifteenPoints(hand, 0, 0);
+    rPoints = runPoints(hand);   
+    flPoints = flushPointsJustHand(hand);
+    points = pPoints + fPoints + rPoints + flPoints;
+
+	return points;
 }
 
 int scoreHand(deck hand, deck upCard, int crib, int loud){
@@ -403,9 +434,10 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 		maxScore,
 		scoreBuff,
 		runner,
-		index,
 		buffI,
 		buffJ;
+	deck localDeck;
+	localDeck = emptyDeck(4);	
 	
 	maxScore = 0;
 	scoreBuff = 0;
@@ -413,19 +445,28 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 	buffI = hand->len - 2;
 	buffJ = hand->len - 1;
 
-	deck localDeck;
-	localDeck = emptyDeck(4);
+	printDeck(*hand);
 
 	for (i = 0; i < hand->len - 1; i++){
 		for (j = i + 1; j < hand->len; j++){
-			index = 0;
+			localDeck.cap = 0;
+			localDeck.len = 0;
 			for (runner = 0; runner < hand->len; runner++) {
 				if (runner != i && runner != j) {
-					localDeck.cards[index] = hand->cards[runner];
-					index++;
+					copyCard(*hand, &localDeck, runner);
 				}
 			}
-			scoreBuff = scoreHand(localDeck, upCard, NOT_CRIB, QUIET);
+			sortDeck(localDeck);
+			scoreBuff = scoreHandWithoutUpcard(localDeck);
+
+			printf("Printing local deck:\n");
+			printDeck(localDeck);
+			printf("\n");
+			printf("i: %d\n", i);
+			printf("j: %d\n", j);
+			printf("scoreBuff: %d\n", scoreBuff);
+			printf("maxScore: %d\n", maxScore);
+
 			if (cardValue(hand->cards[i]) + cardValue(hand->cards[j]) == 15){
 				if (!player){
 					scoreBuff += 2;
@@ -435,16 +476,24 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 			}
 
 			if (scoreBuff > maxScore) {
+				maxScore = scoreBuff;
 				buffI = i;
 				buffJ = j;
+				printf("Updating buffI and buffJ.\n");
+				printf("buffI: %d\n", buffI);
+				printf("buffJ: %d\n", buffJ);
 			}
 		}
 	}
-
+	printf("Computer hand:\n");
+	printDeck(*hand);
+	printf("Computer selected:\nbuffJ: %d\nbuffI: %d\n", buffJ, buffI);
 
 	moveCard(hand,crib, buffJ);
 	moveCard(hand,crib, buffI);
 
+	printDeck(*hand);
+	printf("\n\n");
 
 	freeDeck(localDeck);
 }
@@ -633,7 +682,7 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 	buffInt = 0;
 	score = 0;
 	
-	if (buffInt = peggingPairs(c, peggingDeck, index)){
+	if ((buffInt = peggingPairs(c, peggingDeck, index))){
 		// offset by one because peggingPairs returns the number of cards in the 
 		// peggingDeck that are identical to the card selected by the player.
 		switch (buffInt) {
@@ -663,7 +712,7 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 		}
 	}
 
-	if (buffInt = peggingRuns(c, peggingDeck, index)){
+	if ((buffInt = peggingRuns(c, peggingDeck, index))){
 		if (loud){
 			printf("Run of %d for %d.\n", buffInt, buffInt);
 		}
@@ -702,9 +751,9 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
     		selection = computerPeg(localHands[player], *peggingDeck, index, *sum);
 		}
 
-		*sum += cardValue(localHands[player].cards[selection]);
 		score = pegSelectionScore(localHands[player].cards[selection], *peggingDeck, *sum, index, LOUD);
 
+		*sum += cardValue(localHands[player].cards[selection]);
 		printf("%s played: ", player? "You": "Computer");
 		printCard(localHands[player].cards[selection]);
 
@@ -765,19 +814,18 @@ int peg(deck *hands, int *playerPoints, int dealer){
     			selection = computerPeg(localHands[player], peggingDeck, index, sum);
     		}
 
-    		sum += cardValue(localHands[player].cards[selection]);   
-
 			printf("%s played: ", player? "You": "Computer");
 			printCard(localHands[player].cards[selection]);
 
     		score = pegSelectionScore(localHands[player].cards[selection], peggingDeck, sum, index, LOUD);
-    		
+    		sum += cardValue(localHands[player].cards[selection]);   
+
     		if (addPoints(player, playerPoints, score)){
     			rVal = 1;
     			break;
     		} 
 
-    		if (sum >= 31){
+    		if (sum >= 31 && sum != 15){
     			sum = 0;
     			index = peggingDeck.len;    
 			
@@ -804,9 +852,16 @@ int peg(deck *hands, int *playerPoints, int dealer){
     		sum = 0;
     		index = peggingDeck.len;
 //     		continue bc turn stays w player who said go
-    		continue; 
+			if (localHands[player].len > 0){
+    			continue; 
+			}
     	}
     	player = !player;
+	}
+
+	printf("Last card for one.\n");
+	if (addPoints(!player, playerPoints, 1)){
+		rVal = 1;
 	}
 	
 

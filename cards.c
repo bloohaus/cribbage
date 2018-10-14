@@ -241,13 +241,14 @@ void moveCard(deck *deckFrom, deck *deckTo, int cardIndex){
 
 } 
 
-void copyCard(deck deckFrom, deck deckTo, int cardIndex){
-	if (deckTo.cap == deckTo.len){
-		deckTo.cards = realloc(deckTo.cards, (deckTo.len + 1) * sizeof(card));
-		deckTo.cap++;
+void copyCard(deck deckFrom, deck *deckTo, int cardIndex){
+	if (deckTo->cap < deckTo->len + 1){
+		deckTo->cards = realloc(deckTo->cards, (deckTo->len + 1) * sizeof(card));
+		deckTo->cap++;
 	}
 	
-	deckTo.cards[deckTo.len++] = deckFrom.cards[cardIndex];
+	deckTo->cards[deckTo->len] = deckFrom.cards[cardIndex];
+	deckTo->len++;
 }
 
 void copyDeck(deck deckFrom, deck *deckTo){
