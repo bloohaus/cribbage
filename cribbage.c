@@ -66,7 +66,7 @@ int main(int argc, char **argv){
     	cribSelectComputer(&hands[0], &crib, dealer);
     	cribSelectHuman(&hands[1], &crib, dealer);
     	
-    	printf("crib selected. your hand:\n");
+    	printf("Crib selected. Your hand:\n");
     	printDeck(hands[1]);
     	
     	sortDeck(crib);
@@ -88,8 +88,7 @@ int main(int argc, char **argv){
     	
     	peg(hands, playerPoints, dealer);
     	
-    	printf("=============SCORING==============\n\n");
-    	printf("Your hand:\n");    	
+    	printf("=============SCORING==============\n\n"); 	
     	
     	if (dealer){
     		printf("Scoring the computer hand.\n");
@@ -97,17 +96,20 @@ int main(int argc, char **argv){
     			win(playerPoints);
     			break;
     		}
+			printf("\n");
     			
     		printf("Scoring your hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
     			break;
     		}
+			printf("\n");
     			
     		printf("Scoring your crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			win(playerPoints);
     		}
+			printf("\n");
     			
     	} else {
     		printf("Scoring your hand.\n");
@@ -115,18 +117,21 @@ int main(int argc, char **argv){
     			win(playerPoints);
     			break;
     		}
+			printf("\n");
     		
     		printf("Scoring Computer's hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
     			break;
     		}
+			printf("\n");
     			
     		printf("Scoring Computer's crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			win(playerPoints);
     			break;
     		}
+			printf("\n");
     		
     	}
 
@@ -143,8 +148,7 @@ int main(int argc, char **argv){
     	free(hands);
     	
     	dealer = !dealer;
-    	
-    	playerPoints[0] += WIN_VALUE;
+
     }
     
     return 10;
@@ -300,7 +304,7 @@ int cutForDeal(){
 		printf("You won the deal.\n");
 		dealer = 1;
 	} else {
-		printf("You tied.");
+		printf("You tied. ");
 		dealer = cutForDeal();
 	}
 	
@@ -329,14 +333,8 @@ void pickUpCard(deck *d, deck *upCard, int dealer){
 }
 
 int addPoints(int player, int *playerPoints, int points){
-	
-	int i; 
 
 	playerPoints[player] += points;
-
-	for (i = 0; i < 2; i++) {
-		printf("playerPoints[%d]: %d\n", i, playerPoints[i]);
-	}
 
 	if (*playerPoints >= WIN_VALUE){
 		return 1;
@@ -414,11 +412,6 @@ int scoreHand(deck hand, deck upCard, int crib, int loud){
     points = pPoints + fPoints + rPoints + flPoints + nPoints;
 
 	if (loud) {
-		printf("pair points: %d\n", pPoints);
-		printf("fifteen points: %d\n", fPoints);
-		printf("run points: %d\n", rPoints);
-		printf("flush points: %d\n", flPoints);
-		printf("nob points: %d\n", nPoints);
 		printf("Total points: %d\n", points);
 	}
     
@@ -445,8 +438,6 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 	buffI = hand->len - 2;
 	buffJ = hand->len - 1;
 
-	printDeck(*hand);
-
 	for (i = 0; i < hand->len - 1; i++){
 		for (j = i + 1; j < hand->len; j++){
 			localDeck.cap = 0;
@@ -459,15 +450,8 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 			sortDeck(localDeck);
 			scoreBuff = scoreHandWithoutUpcard(localDeck);
 
-			printf("Printing local deck:\n");
-			printDeck(localDeck);
-			printf("\n");
-			printf("i: %d\n", i);
-			printf("j: %d\n", j);
-			printf("scoreBuff: %d\n", scoreBuff);
-			printf("maxScore: %d\n", maxScore);
-
-			if (cardValue(hand->cards[i]) + cardValue(hand->cards[j]) == 15){
+			if (cardValue(hand->cards[i]) + cardValue(hand->cards[j]) == 15 ||
+				hand->cards[i].value == hand->cards[j].value){
 				if (!player){
 					scoreBuff += 2;
 				} else {
@@ -479,21 +463,12 @@ void cribSelectComputer(deck *hand, deck *crib, int player){
 				maxScore = scoreBuff;
 				buffI = i;
 				buffJ = j;
-				printf("Updating buffI and buffJ.\n");
-				printf("buffI: %d\n", buffI);
-				printf("buffJ: %d\n", buffJ);
 			}
 		}
 	}
-	printf("Computer hand:\n");
-	printDeck(*hand);
-	printf("Computer selected:\nbuffJ: %d\nbuffI: %d\n", buffJ, buffI);
 
 	moveCard(hand,crib, buffJ);
 	moveCard(hand,crib, buffI);
-
-	printDeck(*hand);
-	printf("\n\n");
 
 	freeDeck(localDeck);
 }
@@ -503,8 +478,8 @@ void cribSelectHuman(deck *hand, deck *crib, int dealer){
 	int selection,
 		i;
 
-	printDeck(*hand);
 	for (i = 0; i < 2; i++){
+		printDeck(*hand);
 		selection = 1000;
 		while (selection < 0 || selection > hand->len - 1){
 			printf("Enter the card number to transfer it to %s crib.\n", dealer? "your": "the computer's");
@@ -554,14 +529,20 @@ int humanPeg(deck hand, int sum){
 	int selection,
 		buffSum;
 
+	char input[3],
+		buffChar;
+
 	buffSum = 0; 
+	selection = 0;
 
 	printDeck(hand);
+	printf("Sum is %d\n", sum);
 
 	do {
-		printf("Sum is %d\n", sum);
+		while ((buffChar = getchar()) != '\n' && buffChar != EOF); //flush stdin
 		printf("Select a card to play.\n");
-		scanf("%i", &selection);
+		fgets(input, sizeof(input), stdin);
+		selection = atoi(input);
 		
 		if (selection > hand.len || selection < 1){
 			printf("Selection is out of range. Try again.\n");
@@ -736,6 +717,18 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 	return score;
 }
 
+void printPeggingDeck(deck peggingDeck, int index) {
+	int i;
+	printf("\n");
+	for (i = 0; i < peggingDeck.len; i++) {
+		if (i == index){
+			printf("*************\n");
+		}
+		printCard(peggingDeck.cards[i]);
+	}
+	printf("\n");
+}
+
 int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, deck *localHands){
 	int selection,
 		rVal, 
@@ -806,8 +799,10 @@ int peg(deck *hands, int *playerPoints, int dealer){
     	}
     	if (cardValue(localHands[player].cards[0]) + sum <= 31){
 
-			printDeck(peggingDeck);
-			printf("Index: %d\n", index);
+			if (player) {
+				printPeggingDeck(peggingDeck, index);
+			}
+
     		if (player){
     			selection = humanPeg(localHands[player], sum);
     		} else {
@@ -825,9 +820,9 @@ int peg(deck *hands, int *playerPoints, int dealer){
     			break;
     		} 
 
-    		if (sum >= 31 && sum != 15){
+    		if (sum >= 31){
     			sum = 0;
-    			index = peggingDeck.len;    
+    			index = peggingDeck.len + 1;    
 			
     		} else {
     			printf("%s %d\n", player? "You say": "Computer says", sum);
@@ -864,6 +859,9 @@ int peg(deck *hands, int *playerPoints, int dealer){
 		rVal = 1;
 	}
 	
+	for (i = 0; i < 2; i++) {
+		printf("%s: %d points.\n", i? "You" : "Computer", playerPoints[i]);
+	}
 
 	for (i = 0; i < 2; i++){
 		freeDeck(localHands[i]);
