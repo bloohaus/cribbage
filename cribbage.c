@@ -783,7 +783,7 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
 		*sum += cardValue(localHands[player].cards[selection]);
 		moveCard(localHands + player, peggingDeck, selection);
 
-		if (*sum < 31){
+		if (*sum < 31 && *sum != 15){
 			printf("%s %d\n", player? "You say": "Computer says", *sum);
 		}
 
@@ -856,7 +856,9 @@ int peg(deck *hands, int *playerPoints, int dealer){
 
     		if (sum >= 31){
     			sum = 0;
-    			index = peggingDeck.len + 1;    
+    			printf("line 859: index is %d\n", index);
+    			index = peggingDeck.len;    
+    			printf("line 861: index is %d\n", index);
 			
     		} else {
     			printf("%s %d\n", player? "You say": "Computer says", sum);
