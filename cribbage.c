@@ -16,6 +16,13 @@ of memory */
 enum {NOT_CRIB, CRIB};
 enum {QUIET, LOUD};
 
+typedef struct {
+	deck d;
+	deck upCard;
+	deck crib;
+	deck *hands;
+} decks;
+
 int fifteenPoints(deck hand, int sum, int position);
 int runPoints(deck hand);
 int pairPoints(deck hand);
@@ -31,6 +38,7 @@ void cribSelectHuman(deck *hand, deck *crib, int dealer);
 int scoreHand(deck hand, deck upCard, int crib, int loud);
 int peg(deck *hands, int *playerPoints, int dealer);
 int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud);
+void cleanup(decks ds);
 
 int main(int argc, char **argv){
 
@@ -38,6 +46,7 @@ int main(int argc, char **argv){
  		 upCard,
  		 crib,
     	 *hands;
+	decks ds;
     int i, 
         dealer,
         playerPoints[2];
@@ -62,6 +71,11 @@ int main(int argc, char **argv){
  		for (i = 0; i < HANDNUMBER; i++){
  			sortDeck(hands[i]);
     	}
+
+		ds.d = d;
+		ds.crib = crib;
+		ds.hands = hands;
+		ds.upCard = upCard;
     	
     	cribSelectComputer(&hands[0], &crib, dealer);
     	cribSelectHuman(&hands[1], &crib, dealer);
@@ -84,16 +98,21 @@ int main(int argc, char **argv){
     		}
     	}
     	
-    	printf("=============PEGGING==============\n\n");
+    	printf("=============PEGGING==============\n");
     	
-    	peg(hands, playerPoints, dealer);
+    	if (peg(hands, playerPoints, dealer)) {
+			win(playerPoints);
+			cleanup(ds);
+    		break;
+		}
     	
-    	printf("=============SCORING==============\n\n"); 	
+    	printf("=============SCORING==============\n"); 	
     	
     	if (dealer){
     		printf("Scoring the computer hand.\n");
     		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
     			break;
     		}
 			printf("\n");
@@ -101,6 +120,7 @@ int main(int argc, char **argv){
     		printf("Scoring your hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
     			break;
     		}
 			printf("\n");
@@ -108,6 +128,8 @@ int main(int argc, char **argv){
     		printf("Scoring your crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
+				break;
     		}
 			printf("\n");
     			
@@ -115,6 +137,7 @@ int main(int argc, char **argv){
     		printf("Scoring your hand.\n");
     		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
     			break;
     		}
 			printf("\n");
@@ -122,6 +145,7 @@ int main(int argc, char **argv){
     		printf("Scoring Computer's hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
     			break;
     		}
 			printf("\n");
@@ -129,6 +153,7 @@ int main(int argc, char **argv){
     		printf("Scoring Computer's crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			win(playerPoints);
+				cleanup(ds);
     			break;
     		}
 			printf("\n");
@@ -152,6 +177,18 @@ int main(int argc, char **argv){
     }
     
     return 10;
+}
+
+void cleanup(decks ds) {
+	int i;
+
+	freeDeck(ds.d);
+	freeDeck(ds.upCard);
+	freeDeck(ds.crib);
+	for (i = 0; i < 2; i++){
+		freeDeck(ds.hands[i]);
+	}
+	free(ds.hands);
 }
 
 //Game Logic Functions
@@ -518,7 +555,7 @@ int computerPeg(deck hand, deck peggingDeck, int index, int sum){
 		}
 	}
 
-	if (maxScore == 0) {
+	if (maxScore == 0 && i > 0) {
 		return i - 1; 
 	} else {
 		return selection;
@@ -529,9 +566,6 @@ int humanPeg(deck hand, int sum){
 	int selection,
 		buffSum;
 
-	char input[3],
-		buffChar;
-
 	buffSum = 0; 
 	selection = 0;
 
@@ -539,10 +573,8 @@ int humanPeg(deck hand, int sum){
 	printf("Sum is %d\n", sum);
 
 	do {
-		while ((buffChar = getchar()) != '\n' && buffChar != EOF); //flush stdin
 		printf("Select a card to play.\n");
-		fgets(input, sizeof(input), stdin);
-		selection = atoi(input);
+		scanf("%d", &selection);
 		
 		if (selection > hand.len || selection < 1){
 			printf("Selection is out of range. Try again.\n");
@@ -744,12 +776,11 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
     		selection = computerPeg(localHands[player], *peggingDeck, index, *sum);
 		}
 
-		score = pegSelectionScore(localHands[player].cards[selection], *peggingDeck, *sum, index, LOUD);
-
-		*sum += cardValue(localHands[player].cards[selection]);
 		printf("%s played: ", player? "You": "Computer");
 		printCard(localHands[player].cards[selection]);
 
+		score = pegSelectionScore(localHands[player].cards[selection], *peggingDeck, *sum, index, LOUD);
+		*sum += cardValue(localHands[player].cards[selection]);
 		moveCard(localHands + player, peggingDeck, selection);
 
 		if (*sum < 31){
@@ -793,10 +824,12 @@ int peg(deck *hands, int *playerPoints, int dealer){
 	}
 
 	while (localHands[0].len > 0 || localHands[1].len > 0) {
+		
     	if (localHands[player].len == 0){
     		player = !player;
     		continue;
     	}
+
     	if (cardValue(localHands[player].cards[0]) + sum <= 31){
 
 			if (player) {
@@ -814,6 +847,7 @@ int peg(deck *hands, int *playerPoints, int dealer){
 
     		score = pegSelectionScore(localHands[player].cards[selection], peggingDeck, sum, index, LOUD);
     		sum += cardValue(localHands[player].cards[selection]);   
+			moveCard(localHands + player, &peggingDeck, selection);
 
     		if (addPoints(player, playerPoints, score)){
     			rVal = 1;
@@ -828,7 +862,7 @@ int peg(deck *hands, int *playerPoints, int dealer){
     			printf("%s %d\n", player? "You say": "Computer says", sum);
     		}
     		
-    		moveCard(localHands + player, &peggingDeck, selection);
+    		
 
     	} else {
     		
