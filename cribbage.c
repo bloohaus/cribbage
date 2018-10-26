@@ -240,28 +240,65 @@ int pairPoints(deck hand){
 	return points;
 }
 
+/* 
+AA234 = 2 x 4
+AAA23 = 3 x 3
+AA223 = (2 x 3) + (2 x 3)
+multiplier * multiplier * len
+ */
+
 int runPoints(deck hand){
-	int len,
-		multiplier,
-		i;
+	int arrayLen;
+	arrayLen = (hand.len / 2) + 1;
 	
+	int len,
+		multiplier[arrayLen],
+		multiplierIndex,
+		multiplierValue,
+		i,
+		delta,
+		mVal;
+		
+	mVal = 1;
 	len = 1;
-	multiplier = 1;
+	multiplierIndex = 0;
+	multiplierValue = 500;
+	
+	for (i = 0; i < arrayLen; i++){
+		multiplier[i] = 1;
+	}
+	
 
 	for (i = 1; i < hand.len; i++){
-		if (hand.cards[i - 1].value == hand.cards[i].value){
-			multiplier += 1;
-		} else if (hand.cards[i - 1].value == hand.cards[i].value - 1){
+		delta = hand.cards[i].value - hand.cards[i - 1].value;
+		if (delta > 1){
+			if (len < 3){
+				len = 1;
+				continue;
+			} else {
+				break;
+			}
+			
+		} else if (delta == 0){
+			if (hand.cards[i].value == multiplierValue){
+				multiplier[multiplierIndex]++;
+			} else {
+				multiplierValue = hand.cards[i].value;
+				multiplier[++multiplierIndex]++;
+			}
+		} else if (delta == 1){
 			len++;
-		} else if (len < 3){
-			len = 1;
-			multiplier = 1;
 		} else {
-			break;
+			fprintf(stderr, "something is wrong. deck is not sorted./n");
 		}
 	}
+	
+	for (i = 0; i < arrayLen; i++){
+		mVal *= multiplier[i];
+	}
+
 	if (len >= 3){
-		return len * multiplier;
+		return len * mVal;
 	} else {
 		return 0;
 	}
@@ -449,8 +486,16 @@ int scoreHand(deck hand, deck upCard, int crib, int loud){
     points = pPoints + fPoints + rPoints + flPoints + nPoints;
 
 	if (loud) {
+		printf("\n");
+		printf("pPoints: %d\n", pPoints);
+		printf("fPoints: %d\n", fPoints);
+		printf("rPoints: %d\n", rPoints);
+		printf("flPoints: %d\n", flPoints);
+		printf("nPoints: %d\n", nPoints);
 		printf("Total points: %d\n", points);
 	}
+
+
     
     freeDeck(localHand);
     
