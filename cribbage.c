@@ -663,8 +663,24 @@ int checkRun(deck d) {
 
 }
 
+int newCheckRun(deck d){
+	int run,
+		i;
+	run = 1;
+	
+	if (d.len < 3) return 0;
+	
+	for (i = 1; i < d.len; i++){
+		if (d.cards[i].value - d.cards[i - 1].value != 1){
+			run = 0;
+			break;
+		}
+	}
+	return run;
+}
+
 int peggingRuns(card c, deck peggingDeck, int index){
-	int i,
+	int i, j,
 		runLength,
 		maxRun;
 	deck localDeck, 
@@ -682,7 +698,20 @@ int peggingRuns(card c, deck peggingDeck, int index){
 	localDeck.cards[localDeck.len - 1] = c;
 
 	testDeck = emptyDeck(localDeck.len);
-
+	
+	for (i = 0; i < localDeck.len && localDeck.len - i > 2; i++){
+		for (j = i; j < localDeck.len; j++){
+			copyCard(localDeck, &testDeck, j);
+		}
+		sortDeck(testDeck);
+		if (newCheckRun(testDeck)){
+			runLength = testDeck.len;
+			break;
+		}
+		
+		testDeck.len = 0;
+	}
+/*
 	for (i = localDeck.len - 1; i >= 0; i--){
 		moveCard(&localDeck, &testDeck, i);
 		sortDeck(testDeck);
@@ -691,7 +720,7 @@ int peggingRuns(card c, deck peggingDeck, int index){
 			maxRun = runLength;
 		}
 	}
-
+*/
 	freeDeck(localDeck);
 	freeDeck(testDeck);
 	
