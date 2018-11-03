@@ -609,7 +609,8 @@ int computerPeg(deck hand, deck peggingDeck, int index, int sum){
 
 int humanPeg(deck hand, int sum){
 	int selection,
-		buffSum;
+		buffSum, 
+		g;
 
 	buffSum = 0; 
 	selection = 0;
@@ -624,6 +625,9 @@ int humanPeg(deck hand, int sum){
 		if (selection > hand.len || selection < 1){
 			printf("Selection is out of range. Try again.\n");
 			buffSum = 3100;
+			while ((g = getc(stdin)) != EOF && g != '\n'){
+				;
+			}
 			continue;
 		}
 
@@ -682,7 +686,7 @@ int newCheckRun(deck d){
 int peggingRuns(card c, deck peggingDeck, int index){
 	int i, j,
 		runLength,
-		maxRun;
+		localDeckLen;
 	deck localDeck, 
 		 testDeck;
 
@@ -690,12 +694,20 @@ int peggingRuns(card c, deck peggingDeck, int index){
 		return 0;
 	}
 
-	runLength = 0;
-	maxRun = 0;
+	localDeckLen = peggingDeck.len - index + 1; //plus one to accomodate c
 
-	localDeck = emptyDeck(peggingDeck.len - index + 1); //plus one to accomodate c
-	copyDeck(peggingDeck, &localDeck);
-	localDeck.cards[localDeck.len - 1] = c;
+	runLength = 0;
+
+	localDeck = emptyDeck(localDeckLen); 
+	for (i = index; i < peggingDeck.len; i++){
+		copyCard(peggingDeck, &localDeck, i);
+	}
+
+	localDeck.cards[localDeck.len] = c;
+	localDeck.len++;
+
+	printf("localDeck:\n");
+	printDeck(localDeck);
 
 	testDeck = emptyDeck(localDeck.len);
 	
@@ -705,22 +717,16 @@ int peggingRuns(card c, deck peggingDeck, int index){
 		}
 		sortDeck(testDeck);
 		if (newCheckRun(testDeck)){
+			printf("We have a run.\n");
+			printDeck(testDeck);
+			printf("testDeck.len: %d\n", testDeck.len);
 			runLength = testDeck.len;
 			break;
 		}
 		
 		testDeck.len = 0;
 	}
-/*
-	for (i = localDeck.len - 1; i >= 0; i--){
-		moveCard(&localDeck, &testDeck, i);
-		sortDeck(testDeck);
-		runLength = checkRun(testDeck);
-		if (runLength > maxRun){
-			maxRun = runLength;
-		}
-	}
-*/
+
 	freeDeck(localDeck);
 	freeDeck(testDeck);
 	
@@ -906,11 +912,8 @@ int peg(deck *hands, int *playerPoints, int dealer){
 
     	if (cardValue(localHands[player].cards[0]) + sum <= 31){
 
-			if (player) {
-				printPeggingDeck(peggingDeck, index);
-			}
-
     		if (player){
+				printPeggingDeck(peggingDeck, index);
     			selection = humanPeg(localHands[player], sum);
     		} else {
     			selection = computerPeg(localHands[player], peggingDeck, index, sum);
