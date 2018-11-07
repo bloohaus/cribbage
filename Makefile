@@ -1,4 +1,5 @@
 CFLAGS=-Wall -g
+LFLAGS=-lncurses -lmenu
 
 cribbage:
-	gcc $(CFLAGS) cribbage.c -o cribbage
+	gcc $(CFLAGS) $(LFLAGS) cribbage.c -o cribbage

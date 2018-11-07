@@ -6,7 +6,8 @@ of memory */
 #include "cards.c"
 #include <stdio.h>
 #include <stdlib.h> 
-
+#include <ncurses.h>
+#include <menu.h>
 
 #define HANDNUMBER 2
 #define HANDLENGTH 6
@@ -22,6 +23,26 @@ typedef struct {
 	deck crib;
 	deck *hands;
 } decks;
+
+typedef struct windowBox {
+	WINDOW *inner;
+	WINDOW *outer;
+} windowBox;
+
+
+WINDOW *create_newwin(int scoreWindow_h, int scoreWindow_w, int starty, int startx);
+void destroy_win(WINDOW *local_win);
+void printScore(int *points);
+int wcutForDeal();
+void wprintDeck(deck d);
+void wcribSelectHuman(WINDOW *w, deck *hand, deck *crib, int dealer);
+void wwin(int *playerPoints);
+ITEM **buildItemsFromDeck(deck d);
+void printCutCard(card upCard);
+void winnerPrint(char *str);
+windowBox windowBoxInit(int h, int w, int y, int x);
+void printBoxStr(windowBox wb, char *str);
+void killBox(windowBox w);
 
 int fifteenPoints(deck hand, int sum, int position);
 int runPoints(deck hand);
@@ -40,6 +61,253 @@ int peg(deck *hands, int *playerPoints, int dealer);
 int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud);
 void cleanup(decks ds);
 
+WINDOW *gameWindow,
+	   *sumWindow,
+	   *cutWindow;
+
+windowBox scoreBox,
+		  logBox,
+		  peggingBox,
+		  handBox,
+		  sumBox;
+
+MENU *handMenu;
+
+int 	scoreWindow_w, 
+		scoreWindow_h,
+		logWindow_w,
+		logWindow_h,
+		peggingWindow_w,
+		peggingWindow_h,
+		handWindow_w,
+		handWindow_h,
+		gameWindow_w,
+		gameWindow_h;
+
+int main(int argc, char *argv[]){
+
+	deck d,
+ 		 upCard,
+ 		 crib,
+    	 *hands;
+
+	decks ds;
+
+    int i, 
+        dealer,
+        playerPoints[2],
+		win_w, 
+		win_h, 
+		ch, 
+		startx, 
+		starty;
+
+
+	char cardStr[18];
+
+
+    setupCards();
+	playerPoints[0] = playerPoints[1] = 0;
+
+
+	initscr();			/* Start curses mode 		*/
+	cbreak();			/* Line buffering disabled, Pass on
+					 * everty thing to me 		*/
+	keypad(stdscr, TRUE);		/* I need that nifty F1 	*/
+	start_color();			// Start color 			
+	init_pair(1, COLOR_RED, COLOR_BLACK);
+
+	scoreWindow_h = 5;
+	scoreWindow_w = 35;
+	starty = 0;	
+	startx = (COLS - scoreWindow_w);	
+	refresh();
+	scoreBox = windowBoxInit(scoreWindow_h, scoreWindow_w, starty, startx);
+	printScore(playerPoints);
+
+	logWindow_h = 16;
+	logWindow_w = scoreWindow_w;
+	starty += scoreWindow_h;
+	logBox = windowBoxInit(logWindow_h, logWindow_w, starty, startx);
+	
+	peggingWindow_h = (logWindow_h + scoreWindow_h) - 9;
+	peggingWindow_w = COLS - scoreWindow_w;
+	peggingBox = windowBoxInit(peggingWindow_h, peggingWindow_w, 0, 0);
+	
+	cutWindow = derwin(peggingBox.inner, 5, 15, 1, peggingWindow_w - 20);
+	box(cutWindow,0,0);
+	wprintw(cutWindow, "Cut Card:");
+	touchwin(peggingBox.inner);
+	wrefresh(cutWindow);
+	wrefresh(peggingBox.inner);
+
+	handWindow_h = 9;
+	handWindow_w = COLS - scoreWindow_w;
+	handBox = windowBoxInit(handWindow_h, handWindow_w, peggingWindow_h, 0);
+
+	gameWindow_h = LINES - (peggingWindow_h + handWindow_h);
+	gameWindow_w = COLS;
+	gameWindow = newwin(gameWindow_h, gameWindow_w, (peggingWindow_h + handWindow_h), 0);
+
+	dealer = wcutForDeal();
+	
+	char bstr[6];
+
+	for (i = 0; i < 9; i++) {
+		sprintf(bstr, "[%d]: %c\n", i + 1, i + 'a');
+		printBoxStr(peggingBox, bstr);
+	}
+	
+	for (i = 0; i < 6; i++){
+		sprintf(bstr, "[%d]: %c\n", i + 1, i + 'a');
+		printBoxStr(handBox, bstr);
+	}
+	
+	touchwin(peggingBox.inner);
+	wrefresh(cutWindow);
+	
+	while (playerPoints[0] < WIN_VALUE && playerPoints[1] < WIN_VALUE){
+
+    	d = makeDeck();
+ 		shuffleDeck(&d);
+ 		
+ 		upCard = emptyDeck(1);
+    	crib = emptyDeck(4);
+    	
+    	hands = deal(&d, HANDNUMBER, HANDLENGTH);
+
+ 		for (i = 0; i < HANDNUMBER; i++){
+ 			sortDeck(hands[i]);
+    	}
+
+		ds.d = d;
+		ds.crib = crib;
+		ds.hands = hands;
+		ds.upCard = upCard;
+    	
+    	cribSelectComputer(&hands[0], &crib, dealer);
+    	wcribSelectHuman(gameWindow, &hands[1], &crib, dealer);
+    	
+    	wprintw(gameWindow, "Crib selected.\n");
+    	wprintDeck(hands[1]);
+    	
+    	sortDeck(crib);
+    	
+    	pickUpCard(&d, &upCard, dealer);
+    	printCutCard(upCard.cards[0]);
+    	
+    	if (upCard.cards[0].value == 11){
+    		wprintw(logBox.inner, "Nibs (2 pts) to %s!\n", dealer? "you" : "the Computer");
+    		wrefresh(logBox.inner);
+    		if (addPoints(dealer, playerPoints, 2)){
+    			wwin(playerPoints);
+    			break;
+    		}
+    	}
+    	
+    	wprintw(gameWindow, "=============PEGGING==============\n");
+		wrefresh(gameWindow);
+    	
+    	if (peg(hands, playerPoints, dealer)) {
+			wwin(playerPoints);
+			cleanup(ds);
+    		break;
+		}
+    	
+    	printf("=============SCORING==============\n"); 	
+    	
+    	if (dealer){
+    		printf("Scoring the computer hand.\n");
+    		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+    			break;
+    		}
+			printf("\n");
+    			
+    		printf("Scoring your hand.\n");
+    		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+    			break;
+    		}
+			printf("\n");
+    			
+    		printf("Scoring your crib.\n");
+    		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+				break;
+    		}
+			printf("\n");
+    			
+    	} else {
+    		printf("Scoring your hand.\n");
+    		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+    			break;
+    		}
+			printf("\n");
+    		
+    		printf("Scoring Computer's hand.\n");
+    		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+    			break;
+    		}
+			printf("\n");
+    			
+    		printf("Scoring Computer's crib.\n");
+    		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
+    			wwin(playerPoints);
+				cleanup(ds);
+    			break;
+    		}
+			printf("\n");
+    		
+    	}
+		
+    	freeDeck(d);
+    	freeDeck(upCard);
+    	freeDeck(crib);
+    	for (i = 0; i < 2; i++){
+    		freeDeck(hands[i]);
+    	}
+    	
+    	free(hands);
+    	
+    	dealer = !dealer;
+
+    }
+
+	killBox(scoreBox);
+	killBox(logBox);
+	killBox(handBox);
+	killBox(peggingBox);
+	delwin(gameWindow);
+	endwin();			/* End curses mode		  */
+	return 0;
+
+}
+
+void printCutCard(card upCard) {
+	char cardStr[15];
+	sprintCard(upCard, cardStr);
+	mvwprintw(cutWindow, 1, 0, cardStr);
+	touchwin(peggingBox.inner);
+	wrefresh(cutWindow);
+}
+
+void destroy_win(WINDOW *local_win) {	
+
+	wborder(local_win, ' ', ' ', ' ',' ',' ',' ',' ',' ');
+	wrefresh(local_win);
+	delwin(local_win);
+}
+
+/*
+
 int main(int argc, char **argv){
 
  	deck d,
@@ -49,11 +317,17 @@ int main(int argc, char **argv){
 	decks ds;
     int i, 
         dealer,
-        playerPoints[2];
+        playerPoints[2],
+		win_w, 
+		win_h;
+	
+	WINDOW *scoreWindow,
+		   *peggingWindow,
+		   *handWindow;
 
     setupCards();
-	
 	playerPoints[0] = playerPoints[1] = 0;
+
 	
 	dealer = cutForDeal();
 	
@@ -175,9 +449,12 @@ int main(int argc, char **argv){
     	dealer = !dealer;
 
     }
-    
+
+    endwin();
     return 10;
 }
+
+*/
 
 void cleanup(decks ds) {
 	int i;
@@ -344,13 +621,92 @@ int nobPoints(deck hand, deck upCard){
 
 //Game Play Functions
 
+ITEM **buildItemsFromDeck(deck d) {
+	int i;
+	char str[15];
+	ITEM **items;
+
+	items = calloc(d.len + 1, sizeof(ITEM *));
+
+	for (i = 0; i < d.len; i++) {
+		sprintCard(d.cards[i], str);
+		items[i] = new_item(str, str);
+	}
+
+	items[d.len] = (ITEM *) NULL;
+
+	return items;
+}
+
+int wcutForDeal(){
+	deck d,
+		 p0Cut,
+		 p1Cut;
+	int p1Select, 
+		dealer,
+		g;
+	char cardStr[18];
+
+	d = makeDeck();
+	shuffleDeck(&d);
+	p0Cut = emptyDeck(1);
+	p1Cut = emptyDeck(1);
+	
+	p1Select = 1000;
+
+	keypad(gameWindow, TRUE);
+	
+	while (p1Select <= 0 || p1Select > d.len){
+		wprintw(gameWindow, "Cut for Deal. Select a card between 1 and %d.\n", d.len);
+		wscanw(gameWindow, "%d", &p1Select);
+		wrefresh(logBox.inner);
+/*		while ((g = wgetch(logWindow)) != EOF && g != '\n'){
+				;
+		}
+*/
+	}
+	moveCard(&d, &p1Cut, p1Select - 1);
+	
+	moveCard(&d, &p0Cut, randRange(0, d.len - 1));
+	
+	sprintCard(p1Cut.cards[0], cardStr);
+	wprintw(logBox.inner, "You selected:      %s", cardStr);
+
+	sprintCard(p0Cut.cards[0], cardStr);
+	wprintw(logBox.inner, "Computer selected: %s", cardStr);
+	
+	if (p1Cut.cards[0].value > p0Cut.cards[0].value){
+		wprintw(logBox.inner, "You lost the deal.");
+		dealer = 0;
+	} else if (p1Cut.cards[0].value < p0Cut.cards[0].value){
+		wprintw(logBox.inner, "You won the deal.");
+		dealer = 1;
+	} else {
+		wprintw(logBox.inner, "You tied. ");
+		dealer = cutForDeal();
+	}
+
+	wclear(gameWindow);
+	wrefresh(gameWindow);
+	wrefresh(logBox.inner);
+	wgetch(logBox.inner);
+	wclear(logBox.inner);
+	
+	freeDeck(d);
+	freeDeck(p0Cut);
+	freeDeck(p1Cut);
+	
+	return dealer;
+}
+
 int cutForDeal(){
 	deck d,
 		 p0Cut,
 		 p1Cut;
 	int p1Select, 
-		dealer;
-	
+		dealer,
+		g;
+
 	d = makeDeck();
 	shuffleDeck(&d);
 	p0Cut = emptyDeck(1);
@@ -361,6 +717,9 @@ int cutForDeal(){
 	while (p1Select <= 0 || p1Select > d.len){
 		printf("Cut for Deal. Select a card between 1 and %d.\n", d.len);
 		scanf("%d", &p1Select);
+		while ((g = getc(stdin)) != EOF && g != '\n'){
+				;
+		}
 	}
 	moveCard(&d, &p1Cut, p1Select - 1);
 	
@@ -398,8 +757,10 @@ void pickUpCard(deck *d, deck *upCard, int dealer){
 		moveCard(d, upCard, randRange(0, d->len - 1));
 	} else {
 		while (selection < 0 || selection > d->len - 1){
-			printf("Pick the cut card by entering a number between 1 and %d\n", d->len);
-			scanf("%d", &selection);
+			wclear(gameWindow);
+			wrefresh(gameWindow);
+			wprintw(gameWindow, "Pick the cut card by entering a number between 1 and %d\n", d->len);
+			wscanw(gameWindow, "%d", &selection);
 			selection -= 1;
 		}
 		moveCard(d, upCard, selection);
@@ -413,24 +774,13 @@ int addPoints(int player, int *playerPoints, int points){
 	if (*playerPoints >= WIN_VALUE){
 		return 1;
 	}
+
+	printScore(playerPoints);
+
 	return 0;
 }
 
-void win(int *playerPoints){
-	if (playerPoints[0] > playerPoints[1]){
-		printf("Computer wins with %d points!\n", playerPoints[0]);
-		printf("You finished with %d points.\n", playerPoints[1]);
-		if (playerPoints[1] <= SKUNK_VALUE){
-			printf("You were SKUNKED!\n");
-		}
-	} else {
-		printf("You win with %d points!\n", playerPoints[1]);
-		printf("Computer finished with %d points.\n", playerPoints[0]);
-		if (playerPoints[0] <= SKUNK_VALUE){
-			printf("You SKUNKED the opposition!\n");
-		}
-	}
-}
+
 
 int flushPointsJustHand(deck hand) {
 	int suit,
@@ -831,14 +1181,16 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 
 void printPeggingDeck(deck peggingDeck, int index) {
 	int i;
-	printf("\n");
+	char cardStr[15];
+	wclear(peggingBox.inner);
 	for (i = 0; i < peggingDeck.len; i++) {
 		if (i == index){
-			printf("*************\n");
+			wprintw(peggingBox.inner, "*************\n");
 		}
-		printCard(peggingDeck.cards[i]);
+		sprintCard(peggingDeck.cards[i], cardStr);
+		wprintw(peggingBox.inner, "%s", cardStr);
 	}
-	printf("\n");
+	wrefresh(peggingBox.inner);
 }
 
 int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, deck *localHands){
@@ -875,6 +1227,66 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
 
 	return rVal;
 
+}
+
+int whumanPeg(deck d, int sum){
+	ITEM **items,
+		 *currentItem;
+	MENU *menu;
+	int i,
+		selection,
+		ch;
+	
+	items = buildItemsFromDeck(d);
+	
+	wclear(handBox.inner);
+	
+	menu = new_menu(items);
+	set_menu_win(menu, handBox.inner);
+	set_menu_sub(menu, derwin(handBox.inner, 10, 25, 1, 1));
+	keypad(handBox.inner, TRUE);
+	post_menu(menu);
+	wrefresh(handBox.inner);
+	
+	
+	while((ch = getch()) != KEY_F(1))
+	{       switch(ch)
+	        {	case KEY_DOWN:
+				menu_driver(menu, REQ_DOWN_ITEM);
+				break;
+			case KEY_UP:
+				menu_driver(menu, REQ_UP_ITEM);
+				break;
+			case ' ':
+				menu_driver(menu, REQ_TOGGLE_ITEM);
+				break;
+			case 10:	/* Enter */
+			{	char temp[200];
+				ITEM **items;
+
+				items = menu_items(menu);
+				temp[0] = '\0';
+				for(i = 0; i < item_count(menu); ++i)
+					if(item_value(items[i]) == TRUE)
+					{	strcat(temp, item_name(items[i]));
+						strcat(temp, " ");
+					}
+				move(20, 0);
+				clrtoeol();
+				mvprintw(20, 0, temp);
+				refresh();
+			}
+			break;
+		}
+	}	
+	
+	for (i = 0; i < d.len; i++) {
+		free_item(items[i]);
+	}
+	wclear(handBox.inner);
+	free_menu(menu);
+	
+	return 0;
 }
 
 int peg(deck *hands, int *playerPoints, int dealer){
@@ -914,7 +1326,7 @@ int peg(deck *hands, int *playerPoints, int dealer){
 
     		if (player){
 				printPeggingDeck(peggingDeck, index);
-    			selection = humanPeg(localHands[player], sum);
+    			selection = whumanPeg(localHands[player], sum);
     		} else {
     			selection = computerPeg(localHands[player], peggingDeck, index, sum);
     		}
@@ -988,4 +1400,121 @@ int peg(deck *hands, int *playerPoints, int dealer){
 		return 0; 
 	}
 
+}
+
+void print_in_middle(WINDOW *win, int starty, int startx, int scoreWindow_w, char *string)
+{	int length, x, y;
+	float temp;
+
+	if(win == NULL)
+		win = stdscr;
+	getyx(win, y, x);
+	if(startx != 0)
+		x = startx;
+	if(starty != 0)
+		y = starty;
+	if(scoreWindow_w == 0)
+		scoreWindow_w = 80;
+
+	length = strlen(string);
+	temp = (scoreWindow_w - length)/ 2;
+	x = startx + (int)temp;
+	mvwprintw(win, y, x, "%s", string);
+	refresh();
+}
+
+void printScore(int *points) {
+	
+	mvwprintw(scoreBox.inner, 0, 0, "Computer Score: %03d", points[0]);
+	wattron(scoreBox.inner, COLOR_PAIR(1));
+	wprintw(scoreBox.inner, "  (%03d)\n", WIN_VALUE - points[0]);
+	wattroff(scoreBox.inner, COLOR_PAIR(1));
+
+	mvwprintw(scoreBox.inner, 1, 0, "Your Score:     %03d", points[1]);
+	wattron(scoreBox.inner, COLOR_PAIR(1));
+	wprintw(scoreBox.inner, "  (%03d)\n", WIN_VALUE - points[1]);
+	wattroff(scoreBox.inner, COLOR_PAIR(1));
+	
+	touchwin(scoreBox.outer);
+	wrefresh(scoreBox.inner);
+}
+
+WINDOW *create_newwin(int scoreWindow_h, int scoreWindow_w, int starty, int startx)
+{	WINDOW *local_win;
+
+	local_win = newwin(scoreWindow_h, scoreWindow_w, starty, startx);
+	box(local_win, 0 , 0);
+
+	wrefresh(local_win);
+
+	return local_win;
+}
+
+void wprintDeck(deck d){
+	char cStr[20],
+		 lStr[25];
+	int i;
+	
+	for (i = 0; i < d.len; i++){
+		sprintCard(d.cards[i], cStr);
+		sprintf(lStr, "%d. %s", i + 1, cStr);
+		wprintw(gameWindow, lStr);
+	}
+}
+
+
+void wcribSelectHuman(WINDOW *w, deck *hand, deck *crib, int dealer){
+	int selection,
+		i;
+
+	keypad(w, TRUE);
+	for (i = 0; i < 2; i++){
+		wprintDeck(*hand);
+		selection = 1000;
+		while (selection < 0 || selection > hand->len - 1){
+			wprintw(w, "Enter the card number to transfer it to %s crib.\n", dealer? "your": "the computer's");
+			wrefresh(w);
+			wscanw(w, "%d", &selection);
+			selection--;
+		}
+		moveCard(hand, crib, selection);
+		wclear(w);
+	}
+}
+
+void wwin(int *playerPoints){
+	WINDOW *w;
+	w = logBox.inner;
+	if (playerPoints[0] > playerPoints[1]){
+		wprintw(w, "Computer wins with %d points!\n", playerPoints[0]);
+		if (playerPoints[1] <= SKUNK_VALUE){
+			wprintw(w, "You were SKUNKED!\n");
+		}
+	} else {
+		wprintw(w, "You win with %d points!\n", playerPoints[1]);
+		if (playerPoints[0] <= SKUNK_VALUE){
+			printf("You SKUNKED the opposition!\n");
+		}
+	}
+}
+
+windowBox windowBoxInit(int h, int w, int y, int x){
+	windowBox wb;
+	wb.outer = newwin(h, w, y, x);
+	box(wb.outer, 0, 0);
+	wrefresh(wb.outer);
+	wb.inner = derwin(wb.outer, h - 2, w - 2, 1, 1);
+	scrollok(wb.inner, TRUE);
+	return wb;
+}
+
+void printBoxStr(windowBox wb, char *str){
+	touchwin(wb.outer);
+	wprintw(wb.inner, "%s", str);
+	wrefresh(wb.inner);
+}
+
+void killBox(windowBox w){
+	delwin(w.inner);
+	delwin(w.outer);
 }

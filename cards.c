@@ -1,3 +1,5 @@
+//functions and structs to model playing cards. Must call setupCards() in program to initiate random numbers.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -73,6 +75,49 @@ int randRange(int min, int max){
  	return min + rand() / (RAND_MAX / (max - min + 1) + 1);
  }
 
+void sprintCard(card c, char *str) {
+
+	char suitName[9],
+ 		 ch[3];
+
+
+	switch (c.suit) {
+		case HEARTS: 
+			strcpy(suitName, "HEARTS");
+			break;
+		case DIAMONDS:
+			strcpy(suitName, "DIAMONDS");
+			break;
+		case CLUBS:
+			strcpy(suitName, "CLUBS");
+			break;
+		case SPADES:
+			strcpy(suitName, "SPADES");
+			break;
+	}
+	
+	switch (c.value) {
+		case 1:
+			strcpy(ch, "A");
+			break;
+		case 10:
+			strcpy(ch, "10");
+			break;
+		case 11:
+			strcpy(ch, "J");
+			break;
+		case 12:
+			strcpy(ch, "Q");
+			break;
+		case 13: 
+			strcpy(ch, "K");
+			break;
+		default: 
+			ch[0] = (c.value) + '0';
+			ch[1] = '\0';
+	}
+ 	sprintf(str, "%s of %s\n", ch, suitName);
+}
 
 void printCard(card c){
  	char suitName[9],
