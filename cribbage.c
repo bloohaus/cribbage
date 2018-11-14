@@ -8,6 +8,7 @@ of memory */
 #include <stdlib.h> 
 #include <ncurses.h>
 #include <menu.h>
+#include <errno.h>
 
 #define HANDNUMBER 2
 #define HANDLENGTH 6
@@ -29,15 +30,13 @@ typedef struct windowBox {
 	WINDOW *outer;
 } windowBox;
 
-
-WINDOW *create_newwin(int scoreWindow_h, int scoreWindow_w, int starty, int startx);
 void destroy_win(WINDOW *local_win);
 void printScore(int *points);
 int wcutForDeal();
 void wprintDeck(deck d);
-void wcribSelectHuman(WINDOW *w, deck *hand, deck *crib, int dealer);
+void wcribSelectHuman(deck *hand, deck *crib, int dealer);
 void wwin(int *playerPoints);
-ITEM **buildItemsFromDeck(deck d);
+ITEM **buildItemsFromDeck(deck *d);
 void printCutCard(card upCard);
 void winnerPrint(char *str);
 windowBox windowBoxInit(int h, int w, int y, int x);
@@ -125,12 +124,12 @@ int main(int argc, char *argv[]){
 	scoreBox = windowBoxInit(scoreWindow_h, scoreWindow_w, starty, startx);
 	printScore(playerPoints);
 
-	logWindow_h = 16;
+	logWindow_h = 20;
 	logWindow_w = scoreWindow_w;
 	starty += scoreWindow_h;
 	logBox = windowBoxInit(logWindow_h, logWindow_w, starty, startx);
 	
-	peggingWindow_h = (logWindow_h + scoreWindow_h) - 9;
+	peggingWindow_h = (logWindow_h + scoreWindow_h) - 13;
 	peggingWindow_w = COLS - scoreWindow_w;
 	peggingBox = windowBoxInit(peggingWindow_h, peggingWindow_w, 0, 0);
 	
@@ -141,14 +140,14 @@ int main(int argc, char *argv[]){
 	wrefresh(cutWindow);
 	wrefresh(peggingBox.inner);
 
-	handWindow_h = 9;
+	handWindow_h = 13;
 	handWindow_w = COLS - scoreWindow_w;
 	handBox = windowBoxInit(handWindow_h, handWindow_w, peggingWindow_h, 0);
 
 	gameWindow_h = LINES - (peggingWindow_h + handWindow_h);
 	gameWindow_w = COLS;
 	gameWindow = newwin(gameWindow_h, gameWindow_w, (peggingWindow_h + handWindow_h), 0);
-
+	scrollok(gameWindow, TRUE);
 	dealer = wcutForDeal();
 	
 	char bstr[6];
@@ -186,8 +185,9 @@ int main(int argc, char *argv[]){
 		ds.upCard = upCard;
     	
     	cribSelectComputer(&hands[0], &crib, dealer);
-    	wcribSelectHuman(gameWindow, &hands[1], &crib, dealer);
+    	wcribSelectHuman(&hands[1], &crib, dealer);
     	
+    	wclear(gameWindow);
     	wprintw(gameWindow, "Crib selected.\n");
     	wprintDeck(hands[1]);
     	
@@ -205,8 +205,8 @@ int main(int argc, char *argv[]){
     		}
     	}
     	
-    	wprintw(gameWindow, "=============PEGGING==============\n");
-		wrefresh(gameWindow);
+    	wprintw(logBox.inner, "======PEGGING======\n");
+		wrefresh(logBox.inner);
     	
     	if (peg(hands, playerPoints, dealer)) {
 			wwin(playerPoints);
@@ -214,57 +214,58 @@ int main(int argc, char *argv[]){
     		break;
 		}
     	
-    	printf("=============SCORING==============\n"); 	
+    	wprintw(logBox.inner, "======SCORING======\n"); 	
+    	wrefresh(logBox.inner);
     	
     	if (dealer){
-    		printf("Scoring the computer hand.\n");
+    		wprintw(logBox.inner, "Scoring the computer hand.\n");
     		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
     			break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     			
-    		printf("Scoring your hand.\n");
+    		wprintw(logBox.inner, "Scoring your hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
     			break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     			
-    		printf("Scoring your crib.\n");
+    		wprintw(logBox.inner, "Scoring your crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
 				break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     			
     	} else {
-    		printf("Scoring your hand.\n");
+    		wprintw(logBox.inner, "Scoring your hand.\n");
     		if (addPoints(!dealer, playerPoints, scoreHand(hands[!dealer], upCard, NOT_CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
     			break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     		
-    		printf("Scoring Computer's hand.\n");
+    		wprintw(logBox.inner, "Scoring Computer's hand.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(hands[dealer], upCard, NOT_CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
     			break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     			
-    		printf("Scoring Computer's crib.\n");
+    		wprintw(logBox.inner, "Scoring Computer's crib.\n");
     		if (addPoints(dealer, playerPoints, scoreHand(crib, upCard, CRIB, LOUD))){
     			wwin(playerPoints);
 				cleanup(ds);
     			break;
     		}
-			printf("\n");
+			wprintw(logBox.inner, "\n");
     		
     	}
 		
@@ -621,19 +622,17 @@ int nobPoints(deck hand, deck upCard){
 
 //Game Play Functions
 
-ITEM **buildItemsFromDeck(deck d) {
+ITEM **buildItemsFromDeck(deck *d) {
 	int i;
-	char str[15];
 	ITEM **items;
 
-	items = calloc(d.len + 1, sizeof(ITEM *));
+	items = calloc(d->len + 1, sizeof(ITEM *));
 
-	for (i = 0; i < d.len; i++) {
-		sprintCard(d.cards[i], str);
-		items[i] = new_item(str, str);
+	for (i = 0; i < d->len; i++) {
+		items[i] = new_item(d->cards[i].string, "");
 	}
 
-	items[d.len] = (ITEM *) NULL;
+	items[d->len] = (ITEM *) NULL;
 
 	return items;
 }
@@ -660,29 +659,24 @@ int wcutForDeal(){
 		wprintw(gameWindow, "Cut for Deal. Select a card between 1 and %d.\n", d.len);
 		wscanw(gameWindow, "%d", &p1Select);
 		wrefresh(logBox.inner);
-/*		while ((g = wgetch(logWindow)) != EOF && g != '\n'){
-				;
-		}
-*/
 	}
+	
 	moveCard(&d, &p1Cut, p1Select - 1);
 	
 	moveCard(&d, &p0Cut, randRange(0, d.len - 1));
 	
-	sprintCard(p1Cut.cards[0], cardStr);
-	wprintw(logBox.inner, "You selected:      %s", cardStr);
+	wprintw(logBox.inner, "You selected:      %s\n", p1Cut.cards[0].string);
 
-	sprintCard(p0Cut.cards[0], cardStr);
-	wprintw(logBox.inner, "Computer selected: %s", cardStr);
+	wprintw(logBox.inner, "Computer selected: %s\n", p0Cut.cards[0].string);
 	
 	if (p1Cut.cards[0].value > p0Cut.cards[0].value){
-		wprintw(logBox.inner, "You lost the deal.");
+		wprintw(logBox.inner, "You lost the deal.\n");
 		dealer = 0;
 	} else if (p1Cut.cards[0].value < p0Cut.cards[0].value){
-		wprintw(logBox.inner, "You won the deal.");
+		wprintw(logBox.inner, "You won the deal.\n");
 		dealer = 1;
 	} else {
-		wprintw(logBox.inner, "You tied. ");
+		wprintw(logBox.inner, "You tied.\n");
 		dealer = cutForDeal();
 	}
 
@@ -822,11 +816,7 @@ int scoreHand(deck hand, deck upCard, int crib, int loud){
         nPoints,
         points;
 	localHand = joinDecks(hand, upCard);
-	sortDeck(localHand);
-	if (loud) {
-		printDeck(localHand);
-	}
-	
+	sortDeck(localHand);	
 
     pPoints = pairPoints(localHand);
     fPoints = fifteenPoints(localHand, 0, 0);
@@ -836,16 +826,16 @@ int scoreHand(deck hand, deck upCard, int crib, int loud){
     points = pPoints + fPoints + rPoints + flPoints + nPoints;
 
 	if (loud) {
-		printf("\n");
-		printf("pPoints: %d\n", pPoints);
-		printf("fPoints: %d\n", fPoints);
-		printf("rPoints: %d\n", rPoints);
-		printf("flPoints: %d\n", flPoints);
-		printf("nPoints: %d\n", nPoints);
-		printf("Total points: %d\n", points);
+/*		wprintw(logBox.inner, "\n");
+		wprintw(logBox.inner, "pPoints: %d\n", pPoints);
+		wprintw(logBox.inner, "fPoints: %d\n", fPoints);
+		wprintw(logBox.inner, "rPoints: %d\n", rPoints);
+		wprintw(logBox.inner, "flPoints: %d\n", flPoints);
+		wprintw(logBox.inner, "nPoints: %d\n", nPoints);   */
+		wprintw(logBox.inner, "Total points: %d\n", points);
 	}
 
-
+	wrefresh(logBox.inner);
     
     freeDeck(localHand);
     
@@ -965,11 +955,11 @@ int humanPeg(deck hand, int sum){
 	buffSum = 0; 
 	selection = 0;
 
-	printDeck(hand);
-	printf("Sum is %d\n", sum);
+	wprintDeck(hand);
+	wprintw(logBox.inner, "Sum is %d\n", sum);
 
 	do {
-		printf("Select a card to play.\n");
+		wprintw(gameWindow, "Select a card to play.\n");
 		scanf("%d", &selection);
 		
 		if (selection > hand.len || selection < 1){
@@ -1056,9 +1046,6 @@ int peggingRuns(card c, deck peggingDeck, int index){
 	localDeck.cards[localDeck.len] = c;
 	localDeck.len++;
 
-	printf("localDeck:\n");
-	printDeck(localDeck);
-
 	testDeck = emptyDeck(localDeck.len);
 	
 	for (i = 0; i < localDeck.len && localDeck.len - i > 2; i++){
@@ -1067,9 +1054,6 @@ int peggingRuns(card c, deck peggingDeck, int index){
 		}
 		sortDeck(testDeck);
 		if (newCheckRun(testDeck)){
-			printf("We have a run.\n");
-			printDeck(testDeck);
-			printf("testDeck.len: %d\n", testDeck.len);
 			runLength = testDeck.len;
 			break;
 		}
@@ -1131,64 +1115,63 @@ int pegSelectionScore(card c, deck peggingDeck, int sum, int index, int loud){
 		switch (buffInt) {
 			case 1:
 				if (loud){
-					printf("A pair for 2.\n");
+					wprintw(logBox.inner, "A pair for 2.\n");
 				}
 				score += 2;
 				break;
 			case 2:
 				if (loud){
-					printf("Three of a kind for 6.\n");
+					wprintw(logBox.inner, "Three of a kind for 6.\n");
 				}
 				score += 6;
 				break;
 			case 3:
 				if (loud){
-					printf("Four of a kind (!!!) for 12.\n");
+					wprintw(logBox.inner, "Four of a kind (!!!) for 12.\n");
 				}
 				score += 12;
 				break;
 			default:
 				if (loud){
-					printf("peggingPairs() returned neither 1, 2, nor 3.\n");
-					printf("peggingPairs(): %d\n", buffInt);
+					wprintw(logBox.inner, "peggingPairs() returned neither 1, 2, nor 3.\n");
+					wprintw(logBox.inner, "peggingPairs(): %d\n", buffInt);
 				}
 		}
 	}
 
 	if ((buffInt = peggingRuns(c, peggingDeck, index))){
 		if (loud){
-			printf("Run of %d for %d.\n", buffInt, buffInt);
+			wprintw(logBox.inner, "Run of %d for %d.\n", buffInt, buffInt);
 		}
 		score += buffInt;
 	}
 
 	if (peggingFifteens(c, peggingDeck, sum)){
 		if (loud){
-			printf("Fifteen for 2.\n");
+			wprintw(logBox.inner, "Fifteen for 2.\n");
 		}
 		score += 2;
 	}
 	
 	if (peggingThirtyOnes(c, peggingDeck, sum)){
 		if (loud){
-			printf("Thirty-one for 2.\n");
+			wprintw(logBox.inner, "Thirty-one for 2.\n");
 		}
 		score += 2;
 	}
-	
+	wrefresh(logBox.inner);
 	return score;
 }
 
 void printPeggingDeck(deck peggingDeck, int index) {
 	int i;
-	char cardStr[15];
+
 	wclear(peggingBox.inner);
 	for (i = 0; i < peggingDeck.len; i++) {
 		if (i == index){
 			wprintw(peggingBox.inner, "*************\n");
 		}
-		sprintCard(peggingDeck.cards[i], cardStr);
-		wprintw(peggingBox.inner, "%s", cardStr);
+		wprintw(peggingBox.inner, "%s\n", peggingDeck.cards[i].string);
 	}
 	wrefresh(peggingBox.inner);
 }
@@ -1208,15 +1191,14 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
     		selection = computerPeg(localHands[player], *peggingDeck, index, *sum);
 		}
 
-		printf("%s played: ", player? "You": "Computer");
-		printCard(localHands[player].cards[selection]);
+		wprintw(logBox.inner, "%s played: %s", player? "You": "Computer", localHands[player].cards[selection].string);
 
 		score = pegSelectionScore(localHands[player].cards[selection], *peggingDeck, *sum, index, LOUD);
 		*sum += cardValue(localHands[player].cards[selection]);
 		moveCard(localHands + player, peggingDeck, selection);
 
 		if (*sum < 31 && *sum != 15){
-			printf("%s %d\n", player? "You say": "Computer says", *sum);
+			wprintw(logBox.inner, "%s %d\n", player? "You say": "Computer says", *sum);
 		}
 
 		if (addPoints(player, playerPoints, score)){
@@ -1230,26 +1212,29 @@ int go(int player, deck *peggingDeck, int index, int *sum, int *playerPoints, de
 }
 
 int whumanPeg(deck d, int sum){
-	ITEM **items,
-		 *currentItem;
+	ITEM **items;
 	MENU *menu;
 	int i,
 		selection,
-		ch;
-	
-	items = buildItemsFromDeck(d);
-	
+		ch,
+		whileBreak;
+
+	items = buildItemsFromDeck(&d);
+
+	whileBreak = 0;
+
 	wclear(handBox.inner);
 	
 	menu = new_menu(items);
 	set_menu_win(menu, handBox.inner);
-	set_menu_sub(menu, derwin(handBox.inner, 10, 25, 1, 1));
+ 	set_menu_sub(menu, derwin(handBox.inner, 13, 35, 1, 1));
+ 	set_menu_mark(menu, ">");
 	keypad(handBox.inner, TRUE);
 	post_menu(menu);
-	wrefresh(handBox.inner);
+ 	wrefresh(handBox.inner);
 	
 	
-	while((ch = getch()) != KEY_F(1))
+	while(!whileBreak && (ch = wgetch(handBox.inner)) != KEY_F(1))
 	{       switch(ch)
 	        {	case KEY_DOWN:
 				menu_driver(menu, REQ_DOWN_ITEM);
@@ -1261,20 +1246,15 @@ int whumanPeg(deck d, int sum){
 				menu_driver(menu, REQ_TOGGLE_ITEM);
 				break;
 			case 10:	/* Enter */
-			{	char temp[200];
-				ITEM **items;
-
-				items = menu_items(menu);
-				temp[0] = '\0';
-				for(i = 0; i < item_count(menu); ++i)
-					if(item_value(items[i]) == TRUE)
-					{	strcat(temp, item_name(items[i]));
-						strcat(temp, " ");
-					}
-				move(20, 0);
-				clrtoeol();
-				mvprintw(20, 0, temp);
-				refresh();
+			{	
+				selection = item_index(current_item(menu));
+				if (cardValue(d.cards[selection]) + sum <= 31){
+					whileBreak = !whileBreak;
+				} else {
+					wprintw(logBox.inner, "Selection too high.\n");
+					wrefresh(logBox.inner);
+				}
+				
 			}
 			break;
 		}
@@ -1284,9 +1264,10 @@ int whumanPeg(deck d, int sum){
 		free_item(items[i]);
 	}
 	wclear(handBox.inner);
+
 	free_menu(menu);
 	
-	return 0;
+	return selection;
 }
 
 int peg(deck *hands, int *playerPoints, int dealer){
@@ -1331,8 +1312,7 @@ int peg(deck *hands, int *playerPoints, int dealer){
     			selection = computerPeg(localHands[player], peggingDeck, index, sum);
     		}
 
-			printf("%s played: ", player? "You": "Computer");
-			printCard(localHands[player].cards[selection]);
+			wprintw(logBox.inner, "%s played: %s\n", player? "You": "Computer", localHands[player].cards[selection].string);
 
     		score = pegSelectionScore(localHands[player].cards[selection], peggingDeck, sum, index, LOUD);
     		sum += cardValue(localHands[player].cards[selection]);   
@@ -1345,26 +1325,23 @@ int peg(deck *hands, int *playerPoints, int dealer){
 
     		if (sum >= 31){
     			sum = 0;
-    			printf("line 859: index is %d\n", index);
-    			index = peggingDeck.len;    
-    			printf("line 861: index is %d\n", index);
-			
+    			index = peggingDeck.len;
     		} else {
-    			printf("%s %d\n", player? "You say": "Computer says", sum);
+    			wprintw(logBox.inner, "%s %d\n", player? "You say": "Computer says", sum);
     		}
     		
     		
 
     	} else {
     		
-			printf("%s go.\n", player? "You say": "Computer says");
+			wprintw(logBox.inner, "%s go.\n", player? "You say": "Computer says");
 			
 			if (go(!player, &peggingDeck, index, &sum, playerPoints, localHands)) {
 				rVal = 1;
     			break;
 			}
     		
-			printf("Go for one.\n");
+			wprintw(logBox.inner, "Go for one.\n");
 			if (addPoints(!player, playerPoints, 1)){
     			rVal = 1;
     			break;
@@ -1379,13 +1356,9 @@ int peg(deck *hands, int *playerPoints, int dealer){
     	player = !player;
 	}
 
-	printf("Last card for one.\n");
+	wprintw(logBox.inner, "Last card for one.\n");
 	if (addPoints(!player, playerPoints, 1)){
 		rVal = 1;
-	}
-	
-	for (i = 0; i < 2; i++) {
-		printf("%s: %d points.\n", i? "You" : "Computer", playerPoints[i]);
 	}
 
 	for (i = 0; i < 2; i++){
@@ -1400,27 +1373,6 @@ int peg(deck *hands, int *playerPoints, int dealer){
 		return 0; 
 	}
 
-}
-
-void print_in_middle(WINDOW *win, int starty, int startx, int scoreWindow_w, char *string)
-{	int length, x, y;
-	float temp;
-
-	if(win == NULL)
-		win = stdscr;
-	getyx(win, y, x);
-	if(startx != 0)
-		x = startx;
-	if(starty != 0)
-		y = starty;
-	if(scoreWindow_w == 0)
-		scoreWindow_w = 80;
-
-	length = strlen(string);
-	temp = (scoreWindow_w - length)/ 2;
-	x = startx + (int)temp;
-	mvwprintw(win, y, x, "%s", string);
-	refresh();
 }
 
 void printScore(int *points) {
@@ -1439,46 +1391,33 @@ void printScore(int *points) {
 	wrefresh(scoreBox.inner);
 }
 
-WINDOW *create_newwin(int scoreWindow_h, int scoreWindow_w, int starty, int startx)
-{	WINDOW *local_win;
-
-	local_win = newwin(scoreWindow_h, scoreWindow_w, starty, startx);
-	box(local_win, 0 , 0);
-
-	wrefresh(local_win);
-
-	return local_win;
-}
-
 void wprintDeck(deck d){
-	char cStr[20],
-		 lStr[25];
+	char lStr[25];
 	int i;
 	
 	for (i = 0; i < d.len; i++){
-		sprintCard(d.cards[i], cStr);
-		sprintf(lStr, "%d. %s", i + 1, cStr);
+		sprintf(lStr, "%d. %s\n", i + 1, d.cards[i].string);
 		wprintw(gameWindow, lStr);
 	}
 }
 
 
-void wcribSelectHuman(WINDOW *w, deck *hand, deck *crib, int dealer){
-	int selection,
+void wcribSelectHuman(deck *hand, deck *crib, int dealer){
+	int selections[2],
 		i;
 
-	keypad(w, TRUE);
+	keypad(gameWindow, TRUE);
 	for (i = 0; i < 2; i++){
+		wclear(gameWindow);
 		wprintDeck(*hand);
 		selection = 1000;
 		while (selection < 0 || selection > hand->len - 1){
-			wprintw(w, "Enter the card number to transfer it to %s crib.\n", dealer? "your": "the computer's");
-			wrefresh(w);
-			wscanw(w, "%d", &selection);
+			wprintw(gameWindow, "Enter the card number to transfer it to %s crib.\n", dealer? "your": "the computer's");
+			wrefresh(gameWindow);
+			wscanw(gameWindow, "%d", &selection);
 			selection--;
 		}
 		moveCard(hand, crib, selection);
-		wclear(w);
 	}
 }
 

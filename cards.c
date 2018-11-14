@@ -12,6 +12,7 @@ enum comp {HIGHER, LOWER, SAME};
 typedef struct {
 	int suit;
 	int value;
+	char string[16];
  } card;
  
  typedef struct {
@@ -47,33 +48,6 @@ void freeDeck(deck d);
 void setupCards(){
 	srand(time(NULL));
 }
-
-deck makeDeck(){
- 	deck d;
- 	int suit,
- 		val,
- 		cardIndex;
- 	d.cards = malloc(52 * sizeof(card));
- 	cardIndex = 0;
- 	for(suit = 0;suit < 4;suit++)
- 	{
- 		for(val = 1;val <= 13; val++)
- 		{
- 			d.cards[cardIndex].value = val;
- 			d.cards[cardIndex].suit = suit;
- 			cardIndex++;
- 		}
- 	}
-
-	d.len = 52;
-	d.cap = 52;
- 	
- 	return d;
- }
- 
-int randRange(int min, int max){
- 	return min + rand() / (RAND_MAX / (max - min + 1) + 1);
- }
 
 void sprintCard(card c, char *str) {
 
@@ -116,8 +90,39 @@ void sprintCard(card c, char *str) {
 			ch[0] = (c.value) + '0';
 			ch[1] = '\0';
 	}
- 	sprintf(str, "%s of %s\n", ch, suitName);
+ 	sprintf(str, "%s of %s", ch, suitName);
 }
+
+deck makeDeck(){
+ 	deck d;
+ 	int suit,
+ 		val,
+ 		cardIndex;
+
+	char str[16];
+ 	d.cards = malloc(52 * sizeof(card));
+ 	cardIndex = 0;
+ 	for(suit = 0; suit < 4; suit++) {
+ 		for(val = 1; val <= 13; val++) {
+ 			d.cards[cardIndex].value = val;
+ 			d.cards[cardIndex].suit = suit;
+			sprintCard(d.cards[cardIndex], str);
+			strcpy(d.cards[cardIndex].string, str);
+ 			cardIndex++;
+ 		}
+ 	}
+
+	d.len = 52;
+	d.cap = 52;
+ 	
+ 	return d;
+ }
+ 
+int randRange(int min, int max){
+ 	return min + rand() / (RAND_MAX / (max - min + 1) + 1);
+ }
+
+
 
 void printCard(card c){
  	char suitName[9],
